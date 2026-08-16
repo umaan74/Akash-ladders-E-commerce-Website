@@ -2,7 +2,8 @@
 // Environment variable VITE_API_BASE_URL is set in Vercel production
 // For local development, VITE_API_BASE_URL defaults to empty string '', leveraging Vite's proxy (/api -> http://127.0.0.1:5000)
 
-export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || '';
+const rawBaseUrl = import.meta.env.VITE_API_BASE_URL || '';
+export const API_BASE_URL = rawBaseUrl.trim().replace(/\/+$/, '');
 
 /**
  * Helper to construct full API endpoint URL

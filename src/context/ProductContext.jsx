@@ -13,7 +13,7 @@ export const ProductProvider = ({ children }) => {
   const { token } = useAuth();
 
   // Helper to reliably retrieve token from state or localStorage
-  const getAuthToken = () => token || localStorage.getItem('token');
+  const getAuthToken = () => token || localStorage.getItem('akash_token') || localStorage.getItem('token');
 
   // Helper to safely parse JSON responses and avoid SyntaxError: Unexpected token '<'
   const parseJsonResponse = async (res) => {
