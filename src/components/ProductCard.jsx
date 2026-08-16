@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Star, Heart, Scale, ShoppingBag, Eye, Check, ShieldCheck } from 'lucide-react';
+import { Star, Heart, Scale, ShoppingBag, Eye, Check } from 'lucide-react';
 import { useCart } from '../context/CartContext';
 import { useWishlist } from '../context/WishlistContext';
 import { useCompare } from '../context/CompareContext';
@@ -39,10 +39,10 @@ const ProductCard = ({ product }) => {
   };
 
   return (
-    <div className="group bg-slate-900 border border-slate-800 hover:border-amber-500/50 rounded-2xl overflow-hidden transition-all duration-300 hover:shadow-2xl hover:shadow-amber-500/10 flex flex-col justify-between relative">
+    <div className="group bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 hover:border-amber-500/50 rounded-2xl overflow-hidden transition-all duration-300 shadow-sm hover:shadow-xl hover:shadow-amber-500/10 flex flex-col justify-between relative">
       
       {/* Top Image Container */}
-      <div className="relative aspect-4/3 bg-slate-950 overflow-hidden cursor-pointer" onClick={() => navigate(`/products/${product.id}`)}>
+      <div className="relative aspect-4/3 bg-slate-100 dark:bg-slate-950 overflow-hidden cursor-pointer" onClick={() => navigate(`/products/${product.id}`)}>
         
         <img
           src={product.images[0]}
@@ -58,7 +58,7 @@ const ProductCard = ({ product }) => {
             </span>
           )}
           {product.isNew && (
-            <span className="bg-cyan-500 text-slate-950 font-bold text-[10px] uppercase px-2 py-0.5 rounded shadow">
+            <span className="bg-cyan-600 text-white font-bold text-[10px] uppercase px-2 py-0.5 rounded shadow">
               New Model
             </span>
           )}
@@ -73,7 +73,7 @@ const ProductCard = ({ product }) => {
             className={`p-2 rounded-full backdrop-blur-md transition-all shadow-md ${
               inWishlist 
                 ? 'bg-rose-500 text-white' 
-                : 'bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800'
+                : 'bg-white/80 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 hover:text-rose-500 hover:bg-white dark:hover:bg-slate-800'
             }`}
             title={inWishlist ? "Remove from Wishlist" : "Add to Wishlist"}
           >
@@ -86,7 +86,7 @@ const ProductCard = ({ product }) => {
             className={`p-2 rounded-full backdrop-blur-md transition-all shadow-md ${
               inCompare 
                 ? 'bg-amber-500 text-slate-950 font-bold' 
-                : 'bg-slate-900/80 text-slate-300 hover:text-white hover:bg-slate-800'
+                : 'bg-white/80 dark:bg-slate-900/80 text-slate-700 dark:text-slate-300 hover:text-amber-500 hover:bg-white dark:hover:bg-slate-800'
             }`}
             title={inCompare ? "Remove from Compare" : "Compare Ladder"}
           >
@@ -96,7 +96,7 @@ const ProductCard = ({ product }) => {
         </div>
 
         {/* Category Pill Over Image Bottom */}
-        <div className="absolute bottom-3 left-3 bg-slate-900/90 backdrop-blur-md border border-slate-700/60 px-2.5 py-1 rounded-md text-[11px] font-semibold text-slate-300">
+        <div className="absolute bottom-3 left-3 bg-white/90 dark:bg-slate-900/90 backdrop-blur-md border border-slate-200 dark:border-slate-700/60 px-2.5 py-1 rounded-md text-[11px] font-semibold text-slate-700 dark:text-slate-300 shadow-sm">
           {product.category}
         </div>
       </div>
@@ -106,14 +106,14 @@ const ProductCard = ({ product }) => {
         
         <div>
           {/* Rating & Stock */}
-          <div className="flex items-center justify-between text-xs text-slate-400 mb-1.5">
-            <div className="flex items-center gap-1 text-amber-400 font-semibold">
+          <div className="flex items-center justify-between text-xs text-slate-500 dark:text-slate-400 mb-1.5">
+            <div className="flex items-center gap-1 text-amber-500 font-semibold">
               <Star className="w-3.5 h-3.5 fill-current" />
               <span>{product.rating}</span>
-              <span className="text-slate-500 text-[11px]">({product.reviewsCount})</span>
+              <span className="text-slate-400 dark:text-slate-500 text-[11px]">({product.reviewsCount})</span>
             </div>
             <span className={`text-[11px] font-bold ${
-              product.stock === 'In Stock' ? 'text-emerald-400' : 'text-amber-400'
+              product.stock === 'In Stock' ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
             }`}>
               {product.stock}
             </span>
@@ -122,31 +122,31 @@ const ProductCard = ({ product }) => {
           {/* Product Name */}
           <Link 
             to={`/products/${product.id}`}
-            className="block text-base font-bold text-white group-hover:text-amber-400 transition-colors line-clamp-2 leading-snug"
+            className="block text-base font-bold text-slate-900 dark:text-white group-hover:text-amber-500 transition-colors line-clamp-2 leading-snug"
           >
             {product.name}
           </Link>
 
           {/* Specifications Pills */}
-          <div className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] text-slate-300">
-            <span className="bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/50">
+          <div className="mt-2.5 flex flex-wrap gap-1.5 text-[11px] text-slate-600 dark:text-slate-300">
+            <span className="bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700/50">
               Height: {product.height}
             </span>
-            <span className="bg-slate-800/80 px-2 py-0.5 rounded border border-slate-700/50">
+            <span className="bg-slate-100 dark:bg-slate-800/80 px-2 py-0.5 rounded border border-slate-200 dark:border-slate-700/50">
               Load: {product.weightCapacity}
             </span>
           </div>
         </div>
 
         {/* Price & Action Row */}
-        <div className="pt-3 border-t border-slate-800/80 flex items-center justify-between gap-2">
+        <div className="pt-3 border-t border-slate-200 dark:border-slate-800/80 flex items-center justify-between gap-2">
           
           <div>
-            <div className="text-xl font-extrabold text-white">
+            <div className="text-xl font-extrabold text-slate-900 dark:text-white">
               ₹{product.price.toLocaleString('en-IN')}
             </div>
             {product.originalPrice > product.price && (
-              <div className="text-xs text-slate-400 line-through">
+              <div className="text-xs text-slate-400 dark:text-slate-500 line-through">
                 ₹{product.originalPrice.toLocaleString('en-IN')}
               </div>
             )}
@@ -155,7 +155,7 @@ const ProductCard = ({ product }) => {
           <div className="flex items-center gap-2">
             <Link
               to={`/products/${product.id}`}
-              className="p-2.5 bg-slate-800 hover:bg-slate-700 text-slate-300 hover:text-white rounded-xl transition-colors"
+              className="p-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white rounded-xl transition-colors"
               title="View Specifications & Details"
             >
               <Eye className="w-4 h-4" />

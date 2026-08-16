@@ -24,6 +24,8 @@ import Register from './pages/Register';
 import CustomerDashboard from './pages/CustomerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 
+import { ThemeProvider } from './context/ThemeContext';
+
 // Helper component to reset scroll position on route navigation
 const ScrollToTop = () => {
   const { pathname } = useLocation();
@@ -36,13 +38,14 @@ const ScrollToTop = () => {
 function App() {
   return (
     <Router>
-      <AuthProvider>
-        <ProductProvider>
-          <CartProvider>
-            <WishlistProvider>
-            <CompareProvider>
-              <ScrollToTop />
-              <div className="min-h-screen flex flex-col bg-slate-950 text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950">
+      <ThemeProvider>
+        <AuthProvider>
+          <ProductProvider>
+            <CartProvider>
+              <WishlistProvider>
+                <CompareProvider>
+                  <ScrollToTop />
+                  <div className="min-h-screen flex flex-col bg-slate-50 dark:bg-slate-950 text-slate-900 dark:text-slate-100 font-sans selection:bg-amber-500 selection:text-slate-950 transition-colors duration-200">
                 <Navbar />
                 <main className="flex-1">
                   <Routes>
@@ -84,6 +87,7 @@ function App() {
         </CartProvider>
       </ProductProvider>
     </AuthProvider>
+    </ThemeProvider>
   </Router>
   );
 }

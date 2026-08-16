@@ -1,5 +1,5 @@
 import React from 'react';
-import { Filter, RotateCcw, ChevronDown, Check } from 'lucide-react';
+import { Filter, RotateCcw, Check } from 'lucide-react';
 import { categories } from '../data/products';
 
 const FilterSidebar = ({
@@ -20,17 +20,17 @@ const FilterSidebar = ({
   const usages = ["All", "Domestic & Household", "Domestic & Commercial", "Commercial & Office", "Commercial & Industrial", "Industrial & Electrical", "Industrial & Construction", "Warehouse & Assembly Plants"];
 
   return (
-    <div className="bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-6">
+    <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl p-5 space-y-6 text-slate-900 dark:text-slate-100 shadow-sm">
       
       {/* Header */}
-      <div className="flex items-center justify-between border-b border-slate-800 pb-4">
-        <div className="flex items-center gap-2 text-white font-bold text-base">
+      <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
+        <div className="flex items-center gap-2 text-slate-900 dark:text-white font-bold text-base">
           <Filter className="w-4 h-4 text-amber-500" />
           <span>Filter Ladders</span>
         </div>
         <button
           onClick={onResetFilters}
-          className="text-xs text-amber-400 hover:underline flex items-center gap-1 font-semibold"
+          className="text-xs text-amber-600 dark:text-amber-400 hover:underline flex items-center gap-1 font-semibold"
         >
           <RotateCcw className="w-3 h-3" /> Reset
         </button>
@@ -38,14 +38,14 @@ const FilterSidebar = ({
 
       {/* Filter 1: Category */}
       <div className="space-y-2">
-        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Category</label>
+        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Category</label>
         <div className="space-y-1 max-h-48 overflow-y-auto pr-1">
           <button
             onClick={() => setSelectedCategory('All')}
             className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${
               selectedCategory === 'All'
-                ? 'bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30'
-                : 'text-slate-300 hover:bg-slate-800'
+                ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/30'
+                : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
             }`}
           >
             <span>All Categories</span>
@@ -58,8 +58,8 @@ const FilterSidebar = ({
               onClick={() => setSelectedCategory(c.name)}
               className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${
                 selectedCategory === c.name
-                  ? 'bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30'
-                  : 'text-slate-300 hover:bg-slate-800'
+                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/30'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               <span>{c.name}</span>
@@ -70,10 +70,10 @@ const FilterSidebar = ({
       </div>
 
       {/* Filter 2: Max Price Range */}
-      <div className="space-y-2 border-t border-slate-800/80 pt-4">
+      <div className="space-y-2 border-t border-slate-200 dark:border-slate-800/80 pt-4">
         <div className="flex justify-between items-center text-xs font-bold">
-          <span className="uppercase tracking-wider text-slate-400">Max Price</span>
-          <span className="text-amber-400 font-extrabold text-sm">₹{maxPrice.toLocaleString('en-IN')}</span>
+          <span className="uppercase tracking-wider text-slate-500 dark:text-slate-400">Max Price</span>
+          <span className="text-amber-600 dark:text-amber-400 font-extrabold text-sm">₹{maxPrice.toLocaleString('en-IN')}</span>
         </div>
         <input
           type="range"
@@ -82,7 +82,7 @@ const FilterSidebar = ({
           step="1000"
           value={maxPrice}
           onChange={(e) => setMaxPrice(Number(e.target.value))}
-          className="w-full accent-amber-500 bg-slate-800 rounded-lg cursor-pointer h-2"
+          className="w-full accent-amber-500 bg-slate-200 dark:bg-slate-800 rounded-lg cursor-pointer h-2"
         />
         <div className="flex justify-between text-[10px] text-slate-500 font-bold">
           <span>₹2,000</span>
@@ -91,8 +91,8 @@ const FilterSidebar = ({
       </div>
 
       {/* Filter 3: Material */}
-      <div className="space-y-2 border-t border-slate-800/80 pt-4">
-        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Material Type</label>
+      <div className="space-y-2 border-t border-slate-200 dark:border-slate-800/80 pt-4">
+        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Material Type</label>
         <div className="space-y-1">
           {materials.map((m) => (
             <button
@@ -100,8 +100,8 @@ const FilterSidebar = ({
               onClick={() => setSelectedMaterial(m)}
               className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium truncate flex items-center justify-between transition-colors ${
                 selectedMaterial === m
-                  ? 'bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30'
-                  : 'text-slate-300 hover:bg-slate-800'
+                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/30'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               <span className="truncate">{m}</span>
@@ -112,8 +112,8 @@ const FilterSidebar = ({
       </div>
 
       {/* Filter 4: Height Range */}
-      <div className="space-y-2 border-t border-slate-800/80 pt-4">
-        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Height Reach</label>
+      <div className="space-y-2 border-t border-slate-200 dark:border-slate-800/80 pt-4">
+        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Height Reach</label>
         <div className="space-y-1">
           {heightRanges.map((h) => (
             <button
@@ -121,8 +121,8 @@ const FilterSidebar = ({
               onClick={() => setSelectedHeightRange(h)}
               className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium flex items-center justify-between transition-colors ${
                 selectedHeightRange === h
-                  ? 'bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30'
-                  : 'text-slate-300 hover:bg-slate-800'
+                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/30'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               <span>{h}</span>
@@ -133,8 +133,8 @@ const FilterSidebar = ({
       </div>
 
       {/* Filter 5: Suitable Usage */}
-      <div className="space-y-2 border-t border-slate-800/80 pt-4">
-        <label className="block text-xs font-bold uppercase tracking-wider text-slate-400">Usage Environment</label>
+      <div className="space-y-2 border-t border-slate-200 dark:border-slate-800/80 pt-4">
+        <label className="block text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Usage Environment</label>
         <div className="space-y-1">
           {usages.map((u) => (
             <button
@@ -142,8 +142,8 @@ const FilterSidebar = ({
               onClick={() => setSelectedUsage(u)}
               className={`w-full text-left px-3 py-1.5 rounded-lg text-xs font-medium truncate flex items-center justify-between transition-colors ${
                 selectedUsage === u
-                  ? 'bg-amber-500/20 text-amber-400 font-bold border border-amber-500/30'
-                  : 'text-slate-300 hover:bg-slate-800'
+                  ? 'bg-amber-500/20 text-amber-600 dark:text-amber-400 font-bold border border-amber-500/30'
+                  : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
               }`}
             >
               <span className="truncate">{u}</span>

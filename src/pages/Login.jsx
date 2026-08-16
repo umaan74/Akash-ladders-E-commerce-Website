@@ -1,7 +1,7 @@
 import React, { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
-import { Lock, Mail, ShieldCheck, User, ArrowRight, CheckCircle2, KeyRound } from 'lucide-react';
+import { Lock, Mail, ShieldCheck, User, ArrowRight, KeyRound } from 'lucide-react';
 
 const Login = () => {
   const navigate = useNavigate();
@@ -37,29 +37,29 @@ const Login = () => {
   };
 
   return (
-    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12">
+    <div className="min-h-[85vh] flex items-center justify-center px-4 py-12 text-slate-900 dark:text-slate-100">
       <div className="max-w-md w-full space-y-6">
         
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-400 text-xs font-semibold">
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-emerald-500/10 border border-emerald-500/20 text-emerald-600 dark:text-emerald-400 text-xs font-semibold">
             <ShieldCheck className="w-3.5 h-3.5" /> Strict MongoDB Database Verification
           </div>
-          <h1 className="text-3xl font-black text-white tracking-tight">Sign In to Akash Ladders</h1>
-          <p className="text-sm text-slate-400">
+          <h1 className="text-3xl font-black text-slate-900 dark:text-white tracking-tight">Sign In to Akash Ladders</h1>
+          <p className="text-sm text-slate-600 dark:text-slate-400">
             Sign in to your registered customer account or admin dashboard
           </p>
         </div>
 
         {/* Portal Switcher Tabs */}
-        <div className="bg-slate-900 p-1.5 rounded-2xl border border-slate-800 grid grid-cols-2 gap-1 text-sm font-semibold">
+        <div className="bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl border border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-1 text-sm font-semibold shadow-sm">
           <button
             type="button"
             onClick={() => handleTabChange('customer')}
             className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 ${
               portalType === 'customer'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <User className="w-4 h-4" /> Customer Portal
@@ -70,8 +70,8 @@ const Login = () => {
             onClick={() => handleTabChange('admin')}
             className={`py-2.5 rounded-xl transition-all flex items-center justify-center gap-2 ${
               portalType === 'admin'
-                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20'
-                : 'text-slate-400 hover:text-white'
+                ? 'bg-amber-500 text-slate-950 shadow-md shadow-amber-500/20 font-bold'
+                : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
             <ShieldCheck className="w-4 h-4" /> Admin Portal
@@ -79,11 +79,11 @@ const Login = () => {
         </div>
 
         {/* Form Container */}
-        <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-xl">
+        <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm dark:shadow-xl">
           
           {/* Seed Account Quick Helper */}
-          <div className="p-3.5 bg-slate-950 rounded-2xl border border-slate-800 text-xs space-y-1.5 text-slate-300">
-            <div className="flex items-center justify-between text-amber-400 font-bold">
+          <div className="p-3.5 bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 text-xs space-y-1.5 text-slate-700 dark:text-slate-300">
+            <div className="flex items-center justify-between text-amber-600 dark:text-amber-400 font-bold">
               <span className="flex items-center gap-1.5">
                 <KeyRound className="w-3.5 h-3.5" /> Registered MongoDB Accounts:
               </span>
@@ -98,54 +98,54 @@ const Login = () => {
                     setPassword('customer123');
                   }
                 }}
-                className="underline hover:text-amber-300 text-[11px]"
+                className="underline hover:text-amber-700 dark:hover:text-amber-300 text-[11px]"
               >
                 Fill Seed Account
               </button>
             </div>
             {portalType === 'admin' ? (
-              <p>Email: <code className="text-white bg-slate-800 px-1.5 py-0.5 rounded">admin@akashladders.com</code> | Pass: <code className="text-white bg-slate-800 px-1.5 py-0.5 rounded">admin123</code></p>
+              <p>Email: <code className="text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">admin@akashladders.com</code> | Pass: <code className="text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">admin123</code></p>
             ) : (
-              <p>Email: <code className="text-white bg-slate-800 px-1.5 py-0.5 rounded">customer@example.com</code> | Pass: <code className="text-white bg-slate-800 px-1.5 py-0.5 rounded">customer123</code></p>
+              <p>Email: <code className="text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">customer@example.com</code> | Pass: <code className="text-slate-900 dark:text-white bg-slate-200 dark:bg-slate-800 px-1.5 py-0.5 rounded">customer123</code></p>
             )}
           </div>
 
           {error && (
-            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-400 text-xs flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-red-500"></span>
+            <div className="p-3 bg-rose-500/10 border border-rose-500/20 rounded-xl text-rose-600 dark:text-rose-400 text-xs flex items-center gap-2">
+              <span className="w-2 h-2 rounded-full bg-rose-500"></span>
               {error}
             </div>
           )}
 
           <form onSubmit={handleSubmit} className="space-y-4">
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">
                 {portalType === 'admin' ? 'Administrator Email' : 'Customer Email'}
               </label>
               <div className="relative">
-                <Mail className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                <Mail className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                 <input
                   type="email"
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   placeholder="name@company.com"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500 transition-colors"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
             </div>
 
             <div>
-              <label className="block text-xs font-semibold text-slate-300 mb-1.5">Password</label>
+              <label className="block text-xs font-semibold text-slate-700 dark:text-slate-300 mb-1.5">Password</label>
               <div className="relative">
-                <Lock className="w-4 h-4 text-slate-500 absolute left-3.5 top-3.5" />
+                <Lock className="w-4 h-4 text-slate-400 absolute left-3.5 top-3.5" />
                 <input
                   type="password"
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   placeholder="••••••••"
-                  className="w-full bg-slate-950 border border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm text-white placeholder:text-slate-600 focus:outline-none focus:border-amber-500 transition-colors"
+                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl pl-10 pr-4 py-3 text-sm text-slate-900 dark:text-white placeholder:text-slate-400 dark:placeholder:text-slate-600 focus:outline-none focus:border-amber-500 transition-colors"
                 />
               </div>
             </div>
@@ -165,9 +165,9 @@ const Login = () => {
           </form>
 
           {portalType === 'customer' && (
-            <div className="text-center text-xs text-slate-400 border-t border-slate-800 pt-4">
+            <div className="text-center text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-800 pt-4">
               Don't have an account yet?{' '}
-              <Link to="/register" className="text-amber-400 hover:underline font-bold">
+              <Link to="/register" className="text-amber-600 dark:text-amber-400 hover:underline font-bold">
                 Create Customer Account
               </Link>
             </div>

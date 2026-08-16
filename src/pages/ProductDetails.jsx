@@ -1,15 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import { 
-  Star, Heart, Scale, ShoppingBag, Check, ShieldCheck, 
-  MessageSquare, ArrowLeft, Award, AlertTriangle, Plus, Minus, Zap,
-  User, Send, CheckCircle2, Lock, Trash2
+  Star, ShoppingBag, Check, ShieldCheck, 
+  MessageSquare, Award, AlertTriangle, Plus, Minus, Zap,
+  Send, CheckCircle2, Lock, Trash2
 } from 'lucide-react';
 import { useProducts } from '../context/ProductContext';
 import { useAuth } from '../context/AuthContext';
 import { useCart } from '../context/CartContext';
-import { useWishlist } from '../context/WishlistContext';
-import { useCompare } from '../context/CompareContext';
 import ProductCard from '../components/ProductCard';
 import CheckoutModal from '../components/CheckoutModal';
 
@@ -36,13 +34,8 @@ const ProductDetails = () => {
   const [reviewMessage, setReviewMessage] = useState('');
 
   const { addToCart } = useCart();
-  const { isInWishlist, toggleWishlist } = useWishlist();
-  const { isInCompare, toggleCompare } = useCompare();
 
-  const inWishlist = isInWishlist(product.id);
-  const inCompare = isInCompare(product.id);
-
-  const discountPercent = Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100);
+  const discountPercent = product ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0;
 
   // Load genuine customer reviews from MongoDB
   const loadReviews = async () => {
@@ -57,6 +50,18 @@ const ProductDetails = () => {
   useEffect(() => {
     loadReviews();
   }, [id, product?.id]);
+
+  if (!product) {
+    return (
+      <div className="max-w-7xl mx-auto px-4 py-16 text-center space-y-4">
+        <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Product Not Found</h2>
+        <p className="text-slate-600 dark:text-slate-400 text-sm">The ladder model you are looking for does not exist in our catalog.</p>
+        <Link to="/products" className="inline-block px-6 py-2.5 bg-amber-500 text-slate-950 font-bold rounded-xl text-xs">
+          Back to Product Catalog
+        </Link>
+      </div>
+    );
+  }
 
   const handleAddToCart = () => {
     addToCart(product, quantity);
@@ -121,7 +126,7 @@ const ProductDetails = () => {
     .slice(0, 4);
 
   return (
-    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12">
+    <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-12 text-slate-900 dark:text-slate-100">
       
       {/* Toast Notification */}
       {addedToast && (
@@ -131,12 +136,12 @@ const ProductDetails = () => {
       )}
 
       {/* Breadcrumbs */}
-      <nav className="flex items-center gap-2 text-xs text-slate-400">
-        <Link to="/" className="hover:text-amber-400 transition-colors">Home</Link>
+      <nav className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400">
+        <Link to="/" className="hover:text-amber-500 transition-colors">Home</Link>
         <span>/</span>
-        <Link to="/products" className="hover:text-amber-400 transition-colors">Ladders Catalog</Link>
+        <Link to="/products" className="hover:text-amber-500 transition-colors">Ladders Catalog</Link>
         <span>/</span>
-        <span className="text-slate-200 font-bold truncate max-w-xs">{product.name}</span>
+        <span className="text-slate-900 dark:text-slate-200 font-bold truncate max-w-xs">{product.name}</span>
       </nav>
 
       {/* Main Product Layout */}
@@ -144,7 +149,7 @@ const ProductDetails = () => {
         
         {/* Left: Images Gallery */}
         <div className="lg:col-span-6 space-y-4">
-          <div className="relative bg-slate-900 border border-slate-800 rounded-3xl overflow-hidden aspect-[4/3] flex items-center justify-center p-6 group">
+          <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden aspect-[4/3] flex items-center justify-center p-6 group shadow-sm">
             <img 
               src={product.images[activeImageIndex] || product.images[0]} 
               alt={product.name}
@@ -168,13 +173,13 @@ const ProductDetails = () => {
 
           {/* Thumbnails */}
           {product.images.length > 1 && (
-            <div className="flex gap-3 overflow-x-auto pb-2 scrollbar-none">
+            <div className="flex gap-3 overflow-x-auto pb-2">
               {product.images.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImageIndex(idx)}
-                  className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 bg-slate-900 p-1 ${
-                    activeImageIndex === idx ? 'border-amber-500 shadow-lg shadow-amber-500/20' : 'border-slate-800 opacity-60 hover:opacity-100'
+                  className={`relative w-20 h-20 rounded-2xl overflow-hidden border-2 transition-all shrink-0 bg-white dark:bg-slate-900 p-1 ${
+                    activeImageIndex === idx ? 'border-amber-500 shadow-lg shadow-amber-500/20' : 'border-slate-200 dark:border-slate-800 opacity-60 hover:opacity-100'
                   }`}
                 >
                   <img src={img} alt="" className="w-full h-full object-contain" />
@@ -189,81 +194,81 @@ const ProductDetails = () => {
           
           <div className="space-y-2">
             <div className="flex items-center gap-3">
-              <span className="text-xs uppercase tracking-widest font-extrabold text-amber-400 bg-amber-400/10 px-3 py-1 rounded-full border border-amber-400/20">
+              <span className="text-xs uppercase tracking-widest font-extrabold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
                 {product.category}
               </span>
-              <span className="text-xs text-slate-500 font-mono">ID: {product.id}</span>
+              <span className="text-xs text-slate-400 font-mono">ID: {product.id}</span>
             </div>
             
-            <h1 className="text-2xl sm:text-3xl font-black text-white leading-tight">{product.name}</h1>
+            <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white leading-tight">{product.name}</h1>
             
             {/* Rating Summary */}
             <div className="flex items-center gap-3 text-xs pt-1">
-              <div className="flex items-center gap-1 bg-amber-400/10 px-2.5 py-1 rounded-lg border border-amber-400/20 text-amber-400 font-bold">
-                <Star className="w-4 h-4 fill-amber-400 text-amber-400" />
+              <div className="flex items-center gap-1 bg-amber-500/10 px-2.5 py-1 rounded-lg border border-amber-500/20 text-amber-600 dark:text-amber-400 font-bold">
+                <Star className="w-4 h-4 fill-amber-500 text-amber-500" />
                 <span>{product.rating} / 5.0</span>
               </div>
-              <span className="text-slate-400 font-medium">
+              <span className="text-slate-600 dark:text-slate-400 font-medium">
                 ({product.reviewsCount} Customer Reviews in Database)
               </span>
-              <span className="text-slate-600">•</span>
-              <span className="text-emerald-400 font-bold flex items-center gap-1">
+              <span className="text-slate-300 dark:text-slate-600">•</span>
+              <span className="text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
                 <ShieldCheck className="w-3.5 h-3.5" /> ISO 9001 Tested
               </span>
             </div>
           </div>
 
           {/* Pricing Box */}
-          <div className="bg-slate-900/80 border border-slate-800 rounded-3xl p-6 space-y-3">
+          <div className="bg-white dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-3 shadow-sm">
             <div className="flex items-baseline gap-4">
-              <span className="text-3xl sm:text-4xl font-black text-white">
+              <span className="text-3xl sm:text-4xl font-black text-slate-900 dark:text-white">
                 ₹{product.price.toLocaleString('en-IN')}
               </span>
               {product.originalPrice > product.price && (
-                <span className="text-lg text-slate-500 line-through font-bold">
+                <span className="text-lg text-slate-400 dark:text-slate-500 line-through font-bold">
                   ₹{product.originalPrice.toLocaleString('en-IN')}
                 </span>
               )}
-              <span className="text-xs font-bold text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
+              <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded-full border border-emerald-500/20">
                 Inclusive of all Taxes & Shipping
               </span>
             </div>
-            <p className="text-xs text-slate-400">
+            <p className="text-xs text-slate-500 dark:text-slate-400">
               ⚡ Factory direct wholesale pricing from Akash Scaffolding & Industrial Ladders.
             </p>
           </div>
 
           {/* Specifications Snapshot */}
           <div className="grid grid-cols-2 sm:grid-cols-3 gap-3 text-xs">
-            <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-sm">
               <span className="text-slate-500 font-semibold block text-[11px]">Material</span>
-              <span className="text-slate-200 font-bold">{product.material}</span>
+              <span className="text-slate-900 dark:text-slate-200 font-bold">{product.material}</span>
             </div>
-            <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-sm">
               <span className="text-slate-500 font-semibold block text-[11px]">Max Height</span>
-              <span className="text-slate-200 font-bold">{product.height}</span>
+              <span className="text-slate-900 dark:text-slate-200 font-bold">{product.height}</span>
             </div>
-            <div className="bg-slate-900 border border-slate-800 p-3 rounded-2xl">
+            <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-3 rounded-2xl shadow-sm">
               <span className="text-slate-500 font-semibold block text-[11px]">Load Capacity</span>
-              <span className="text-slate-200 font-bold">{product.weightCapacity}</span>
+              <span className="text-slate-900 dark:text-slate-200 font-bold">{product.weightCapacity}</span>
             </div>
           </div>
 
           {/* Quantity Selector & Action Buttons */}
           <div className="space-y-4 pt-2">
             <div className="flex items-center gap-4">
-              <span className="text-xs font-bold text-slate-300">Quantity:</span>
-              <div className="flex items-center bg-slate-900 border border-slate-800 rounded-2xl p-1">
+              <span className="text-xs font-bold text-slate-700 dark:text-slate-300">Quantity:</span>
+              <div className="flex items-center bg-slate-100 dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-2xl p-1">
                 <button
                   onClick={() => setQuantity(Math.max(1, quantity - 1))}
-                  className="w-8 h-8 rounded-xl bg-slate-950 flex items-center justify-center text-slate-400 hover:text-white"
+                  className="w-8 h-8 rounded-xl bg-white dark:bg-slate-950 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 >
                   <Minus className="w-4 h-4" />
                 </button>
-                <span className="w-12 text-center font-extrabold text-white text-sm">{quantity}</span>
+                <span className="w-12 text-center font-extrabold text-slate-900 dark:text-white text-sm">{quantity}</span>
                 <button
                   onClick={() => setQuantity(quantity + 1)}
-                  className="w-8 h-8 rounded-xl bg-slate-950 flex items-center justify-center text-slate-400 hover:text-white"
+                  className="w-8 h-8 rounded-xl bg-white dark:bg-slate-950 flex items-center justify-center text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white"
                 >
                   <Plus className="w-4 h-4" />
                 </button>
@@ -273,7 +278,7 @@ const ProductDetails = () => {
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
               <button
                 onClick={handleAddToCart}
-                className="w-full py-4 bg-slate-900 hover:bg-slate-800 border border-amber-500/40 text-amber-400 font-extrabold rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-lg transition-all active:scale-98"
+                className="w-full py-4 bg-slate-100 dark:bg-slate-900 hover:bg-slate-200 dark:hover:bg-slate-800 border border-amber-500/40 text-amber-600 dark:text-amber-400 font-extrabold rounded-2xl text-xs sm:text-sm flex items-center justify-center gap-2 shadow-sm transition-all active:scale-98"
               >
                 <ShoppingBag className="w-5 h-5" /> Add to Cart
               </button>
@@ -292,7 +297,7 @@ const ProductDetails = () => {
             href={whatsappUrl}
             target="_blank"
             rel="noopener noreferrer"
-            className="w-full py-3.5 bg-emerald-600/10 hover:bg-emerald-600/20 border border-emerald-500/30 text-emerald-400 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all"
+            className="w-full py-3.5 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 text-emerald-600 dark:text-emerald-400 font-bold rounded-2xl text-xs flex items-center justify-center gap-2 transition-all"
           >
             <MessageSquare className="w-4 h-4" /> Direct WhatsApp Inquiry with Founder (Imran Khan)
           </a>
@@ -303,8 +308,8 @@ const ProductDetails = () => {
 
       {/* Detailed Specifications Matrix */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-8">
-        <div className="lg:col-span-7 bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-3xl space-y-4">
-          <h3 className="text-lg font-bold text-white flex items-center gap-2">
+        <div className="lg:col-span-7 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 sm:p-8 rounded-3xl space-y-4 shadow-sm">
+          <h3 className="text-lg font-bold text-slate-900 dark:text-white flex items-center gap-2">
             <ShieldCheck className="w-5 h-5 text-amber-500" />
             Detailed Technical Specifications
           </h3>
@@ -323,9 +328,9 @@ const ProductDetails = () => {
                   { label: "Safety Standard Certification", val: product.certification },
                   { label: "Factory Warranty", val: product.warranty }
                 ].map((row, idx) => (
-                  <tr key={idx} className="border-b border-slate-800/60 last:border-0 hover:bg-slate-950/40">
-                    <td className="py-3 px-3 font-semibold text-slate-400 w-1/3">{row.label}</td>
-                    <td className="py-3 px-3 font-bold text-white">{row.val}</td>
+                  <tr key={idx} className="border-b border-slate-200 dark:border-slate-800/60 last:border-0 hover:bg-slate-50 dark:hover:bg-slate-950/40">
+                    <td className="py-3 px-3 font-semibold text-slate-500 dark:text-slate-400 w-1/3">{row.label}</td>
+                    <td className="py-3 px-3 font-bold text-slate-900 dark:text-white">{row.val}</td>
                   </tr>
                 ))}
               </tbody>
@@ -333,29 +338,29 @@ const ProductDetails = () => {
           </div>
         </div>
 
-        <div className="lg:col-span-5 bg-slate-900 border border-slate-800 p-6 sm:p-8 rounded-3xl space-y-6">
+        <div className="lg:col-span-5 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-6 sm:p-8 rounded-3xl space-y-6 shadow-sm">
           <div className="space-y-3">
-            <h3 className="text-base font-bold text-white flex items-center gap-2">
+            <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
               <Award className="w-5 h-5 text-amber-500" /> Key Features & Engineering
             </h3>
-            <ul className="space-y-2 text-xs text-slate-300">
+            <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
               {product.features?.map((feat, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <Check className="w-4 h-4 text-emerald-400 shrink-0 mt-0.5" />
+                  <Check className="w-4 h-4 text-emerald-500 shrink-0 mt-0.5" />
                   <span>{feat}</span>
                 </li>
               ))}
             </ul>
           </div>
 
-          <div className="space-y-3 pt-4 border-t border-slate-800">
-            <h3 className="text-base font-bold text-amber-400 flex items-center gap-2">
+          <div className="space-y-3 pt-4 border-t border-slate-200 dark:border-slate-800">
+            <h3 className="text-base font-bold text-amber-600 dark:text-amber-400 flex items-center gap-2">
               <AlertTriangle className="w-5 h-5 text-amber-500" /> Mandatory Safety Information
             </h3>
-            <ul className="space-y-2 text-xs text-slate-300">
+            <ul className="space-y-2 text-xs text-slate-600 dark:text-slate-300">
               {product.safetyInfo?.map((info, idx) => (
                 <li key={idx} className="flex items-start gap-2">
-                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400 shrink-0 mt-1.5" />
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-500 shrink-0 mt-1.5" />
                   <span>{info}</span>
                 </li>
               ))}
@@ -364,40 +369,38 @@ const ProductDetails = () => {
         </div>
       </div>
 
-      {/* =================================================== */}
       {/* REVIEWS & RATINGS SECTION */}
-      {/* =================================================== */}
-      <div className="bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 space-y-8 shadow-xl">
+      <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-8 space-y-8 shadow-sm">
         
-        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-800 pb-6">
+        <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 border-b border-slate-200 dark:border-slate-800 pb-6">
           <div>
-            <h2 className="text-2xl font-black text-white flex items-center gap-2">
-              <Star className="w-6 h-6 text-amber-400 fill-amber-400" /> Genuine Customer Ratings & Reviews
+            <h2 className="text-2xl font-black text-slate-900 dark:text-white flex items-center gap-2">
+              <Star className="w-6 h-6 text-amber-500 fill-amber-500" /> Genuine Customer Ratings & Reviews
             </h2>
-            <p className="text-slate-400 text-xs mt-1">Stored in MongoDB database collection. Only authenticated customers can rate and review.</p>
+            <p className="text-slate-500 dark:text-slate-400 text-xs mt-1">Stored in MongoDB database collection. Only authenticated customers can rate and review.</p>
           </div>
-          <div className="bg-slate-950 px-5 py-3 rounded-2xl border border-slate-800 flex items-center gap-3">
-            <span className="text-3xl font-black text-white">{product.rating}</span>
+          <div className="bg-slate-50 dark:bg-slate-950 px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-800 flex items-center gap-3">
+            <span className="text-3xl font-black text-slate-900 dark:text-white">{product.rating}</span>
             <div className="text-xs">
-              <div className="flex items-center text-amber-400">
+              <div className="flex items-center text-amber-500">
                 {[1, 2, 3, 4, 5].map(star => (
-                  <Star key={star} className={`w-3.5 h-3.5 ${star <= Math.round(product.rating) ? 'fill-amber-400' : 'text-slate-700'}`} />
+                  <Star key={star} className={`w-3.5 h-3.5 ${star <= Math.round(product.rating) ? 'fill-amber-500' : 'text-slate-300 dark:text-slate-700'}`} />
                 ))}
               </div>
-              <span className="text-slate-400 font-semibold">{product.reviewsCount} Total Reviews</span>
+              <span className="text-slate-500 dark:text-slate-400 font-semibold">{product.reviewsCount} Total Reviews</span>
             </div>
           </div>
         </div>
 
         {/* Review Form or Auth Prompt */}
-        <div className="bg-slate-950 border border-slate-800 rounded-2xl p-6 space-y-4">
-          <h3 className="text-base font-bold text-white flex items-center gap-2">
-            <MessageSquare className="w-4 h-4 text-amber-400" /> Rate & Review This Product
+        <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-6 space-y-4">
+          <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-2">
+            <MessageSquare className="w-4 h-4 text-amber-500" /> Rate & Review This Product
           </h3>
 
           {!isLoggedIn ? (
             <div className="p-4 bg-amber-500/10 border border-amber-500/20 rounded-xl flex flex-col sm:flex-row items-center justify-between gap-4 text-xs">
-              <div className="flex items-center gap-3 text-amber-300">
+              <div className="flex items-center gap-3 text-amber-700 dark:text-amber-300">
                 <Lock className="w-5 h-5 shrink-0" />
                 <span>Please sign in to your registered customer account to submit a rating and review for this product. Anonymous reviews are disabled.</span>
               </div>
@@ -412,13 +415,13 @@ const ProductDetails = () => {
             <form onSubmit={handleReviewSubmit} className="space-y-4 text-xs">
               
               {reviewMessage && (
-                <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-400 font-bold flex items-center gap-2">
+                <div className="p-3 bg-emerald-500/10 border border-emerald-500/30 rounded-xl text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-2">
                   <CheckCircle2 className="w-4 h-4" /> {reviewMessage}
                 </div>
               )}
 
               <div className="flex items-center gap-3">
-                <span className="font-semibold text-slate-300">Your Rating:</span>
+                <span className="font-semibold text-slate-700 dark:text-slate-300">Your Rating:</span>
                 <div className="flex items-center gap-1">
                   {[1, 2, 3, 4, 5].map((star) => (
                     <button
@@ -427,33 +430,33 @@ const ProductDetails = () => {
                       onClick={() => setReviewRating(star)}
                       className="p-1 transition-transform hover:scale-125 focus:outline-none"
                     >
-                      <Star className={`w-6 h-6 ${star <= reviewRating ? 'fill-amber-400 text-amber-400' : 'text-slate-700'}`} />
+                      <Star className={`w-6 h-6 ${star <= reviewRating ? 'fill-amber-500 text-amber-500' : 'text-slate-300 dark:text-slate-700'}`} />
                     </button>
                   ))}
                 </div>
-                <span className="text-amber-400 font-bold text-sm">({reviewRating} / 5 Stars)</span>
+                <span className="text-amber-600 dark:text-amber-400 font-bold text-sm">({reviewRating} / 5 Stars)</span>
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1 font-semibold">Review Title (Optional)</label>
+                <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Review Title (Optional)</label>
                 <input
                   type="text"
                   value={reviewTitle}
                   onChange={(e) => setReviewTitle(e.target.value)}
                   placeholder="e.g. Extremely sturdy build quality, delivered fast!"
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl px-3 py-2.5 text-xs text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl px-3 py-2.5 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                 />
               </div>
 
               <div>
-                <label className="block text-slate-400 mb-1 font-semibold">Detailed Review Feedback *</label>
+                <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Detailed Review Feedback *</label>
                 <textarea
                   rows={3}
                   required
                   value={reviewComment}
                   onChange={(e) => setReviewComment(e.target.value)}
                   placeholder="Share your experience regarding heavy duty capacity, lock security, or delivery..."
-                  className="w-full bg-slate-900 border border-slate-800 rounded-xl p-3 text-xs text-white focus:outline-none focus:border-amber-500"
+                  className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 rounded-xl p-3 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                 />
               </div>
 
@@ -472,28 +475,28 @@ const ProductDetails = () => {
 
         {/* Existing Reviews List */}
         <div className="space-y-4">
-          <h3 className="text-sm font-bold text-slate-300 uppercase tracking-wider">
+          <h3 className="text-sm font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
             Customer Feedback & Verified Experience ({productReviews.length})
           </h3>
 
           {loadingReviews ? (
             <p className="text-xs text-slate-500">Loading reviews from MongoDB database...</p>
           ) : productReviews.length === 0 ? (
-            <div className="p-8 text-center bg-slate-950 border border-slate-800 rounded-2xl text-slate-500 text-xs">
+            <div className="p-8 text-center bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl text-slate-500 text-xs">
               No customer reviews submitted for this ladder yet. Be the first registered customer to post a review!
             </div>
           ) : (
             <div className="space-y-3">
               {productReviews.map((rev) => (
-                <div key={rev._id} className="bg-slate-950 border border-slate-800 p-4 rounded-2xl space-y-2 text-xs">
+                <div key={rev._id} className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 p-4 rounded-2xl space-y-2 text-xs">
                   <div className="flex items-center justify-between">
                     <div className="flex items-center gap-2">
-                      <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-400 flex items-center justify-center font-bold">
+                      <div className="w-7 h-7 rounded-full bg-amber-500/10 border border-amber-500/20 text-amber-600 dark:text-amber-400 flex items-center justify-center font-bold">
                         {rev.userName?.[0]?.toUpperCase() || 'C'}
                       </div>
                       <div>
-                        <span className="font-bold text-white">{rev.userName}</span>
-                        <span className="text-[10px] text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 ml-2">Verified Customer</span>
+                        <span className="font-bold text-slate-900 dark:text-white">{rev.userName}</span>
+                        <span className="text-[10px] text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20 ml-2">Verified Customer</span>
                       </div>
                     </div>
 
@@ -504,7 +507,7 @@ const ProductDetails = () => {
                       {(isAdmin || (user && user.id === rev.userId)) && (
                         <button
                           onClick={() => handleDeleteReview(rev._id)}
-                          className="text-slate-500 hover:text-red-400 p-1"
+                          className="text-slate-400 hover:text-red-500 p-1"
                           title="Delete Review"
                         >
                           <Trash2 className="w-3.5 h-3.5" />
@@ -513,14 +516,14 @@ const ProductDetails = () => {
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-1 text-amber-400">
+                  <div className="flex items-center gap-1 text-amber-500">
                     {[1, 2, 3, 4, 5].map((s) => (
-                      <Star key={s} className={`w-3.5 h-3.5 ${s <= rev.rating ? 'fill-amber-400' : 'text-slate-800'}`} />
+                      <Star key={s} className={`w-3.5 h-3.5 ${s <= rev.rating ? 'fill-amber-500' : 'text-slate-300 dark:text-slate-800'}`} />
                     ))}
                   </div>
 
-                  {rev.title && <p className="font-bold text-white">{rev.title}</p>}
-                  <p className="text-slate-300 italic">"{rev.comment}"</p>
+                  {rev.title && <p className="font-bold text-slate-900 dark:text-white">{rev.title}</p>}
+                  <p className="text-slate-700 dark:text-slate-300 italic">"{rev.comment}"</p>
                 </div>
               ))}
             </div>
@@ -532,7 +535,7 @@ const ProductDetails = () => {
       {/* Related Ladders */}
       {relatedProducts.length > 0 && (
         <div className="space-y-6 pt-6">
-          <h2 className="text-2xl font-black text-white">Related Safety Ladders</h2>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white">Related Safety Ladders</h2>
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
             {relatedProducts.map((p) => (
               <ProductCard key={p.id} product={p} />
