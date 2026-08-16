@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
+import { API_BASE_URL } from '../config/api';
 
 const AuthContext = createContext();
 
@@ -138,7 +139,7 @@ export const AuthProvider = ({ children }) => {
   const login = async (email, password) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/login', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ email, password }),
@@ -168,7 +169,7 @@ export const AuthProvider = ({ children }) => {
   const register = async (formData) => {
     setLoading(true);
     try {
-      const res = await fetch('/api/auth/register', {
+      const res = await fetch(`${API_BASE_URL}/api/auth/register`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify(formData),
@@ -206,7 +207,7 @@ export const AuthProvider = ({ children }) => {
   const getCustomerOrders = async () => {
     if (!token) return localOrders;
     try {
-      const res = await fetch('/api/orders/my-orders', {
+      const res = await fetch(`${API_BASE_URL}/api/orders/my-orders`, {
         headers: { Authorization: `Bearer ${token}` },
       });
       const data = await res.json();
@@ -226,7 +227,7 @@ export const AuthProvider = ({ children }) => {
       if (filterStatus && filterStatus !== 'all') queryParams.append('status', filterStatus);
       if (searchQuery) queryParams.append('search', searchQuery);
 
-      const res = await fetch(`/api/orders?${queryParams.toString()}`, {
+      const res = await fetch(`${API_BASE_URL}/api/orders?${queryParams.toString()}`, {
         headers: { Authorization: `Bearer ${token}` },
       });
 
@@ -268,7 +269,7 @@ export const AuthProvider = ({ children }) => {
   // Admin Update Order Status
   const updateOrderStatus = async (orderId, newStatus) => {
     try {
-      const res = await fetch(`/api/orders/${orderId}/status`, {
+      const res = await fetch(`${API_BASE_URL}/api/orders/${orderId}/status`, {
         method: 'PATCH',
         headers: {
           'Content-Type': 'application/json',
@@ -298,7 +299,7 @@ export const AuthProvider = ({ children }) => {
   // Create Order
   const createOrder = async (orderData) => {
     try {
-      const res = await fetch('/api/orders', {
+      const res = await fetch(`${API_BASE_URL}/api/orders`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

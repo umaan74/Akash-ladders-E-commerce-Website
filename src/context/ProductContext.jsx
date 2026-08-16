@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { products as fallbackProducts, categories as initialCategories } from '../data/products';
 import { useAuth } from './AuthContext';
+import { API_BASE_URL } from '../config/api';
 
 const ProductContext = createContext();
 
@@ -28,7 +29,7 @@ export const ProductProvider = ({ children }) => {
   const fetchLiveProducts = async () => {
     setLoading(true);
     try {
-      const res = await fetch('/api/products');
+      const res = await fetch(`${API_BASE_URL}/api/products`);
       const data = await parseJsonResponse(res);
       if (res.ok && data.success && data.products && data.products.length > 0) {
         setProducts(data.products);
@@ -58,7 +59,7 @@ export const ProductProvider = ({ children }) => {
   const addProduct = async (productData) => {
     try {
       const authToken = getAuthToken();
-      const res = await fetch('/api/products', {
+      const res = await fetch(`${API_BASE_URL}/api/products`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -83,7 +84,7 @@ export const ProductProvider = ({ children }) => {
   const updateProduct = async (id, productData) => {
     try {
       const authToken = getAuthToken();
-      const res = await fetch(`/api/products/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/products/${id}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -108,7 +109,7 @@ export const ProductProvider = ({ children }) => {
   const deleteProduct = async (id) => {
     try {
       const authToken = getAuthToken();
-      const res = await fetch(`/api/products/${id}`, {
+      const res = await fetch(`${API_BASE_URL}/api/products/${id}`, {
         method: 'DELETE',
         headers: {
           Authorization: `Bearer ${authToken}`,
@@ -131,7 +132,7 @@ export const ProductProvider = ({ children }) => {
   const submitReview = async (reviewData) => {
     try {
       const authToken = getAuthToken();
-      const res = await fetch('/api/reviews', {
+      const res = await fetch(`${API_BASE_URL}/api/reviews`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
@@ -155,7 +156,7 @@ export const ProductProvider = ({ children }) => {
   // Fetch reviews for a specific product
   const fetchProductReviews = async (productId) => {
     try {
-      const res = await fetch(`/api/reviews/product/${productId}`);
+      const res = await fetch(`${API_BASE_URL}/api/reviews/product/${productId}`);
       const data = await parseJsonResponse(res);
       if (res.ok && data.success) {
         return data.reviews;
@@ -170,7 +171,7 @@ export const ProductProvider = ({ children }) => {
   const fetchAllReviews = async () => {
     try {
       const authToken = getAuthToken();
-      const res = await fetch('/api/reviews', {
+      const res = await fetch(`${API_BASE_URL}/api/reviews`, {
         headers: { Authorization: `Bearer ${authToken}` },
       });
       const data = await parseJsonResponse(res);
@@ -187,7 +188,7 @@ export const ProductProvider = ({ children }) => {
   const deleteReview = async (reviewId) => {
     try {
       const authToken = getAuthToken();
-      const res = await fetch(`/api/reviews/${reviewId}`, {
+      const res = await fetch(`${API_BASE_URL}/api/reviews/${reviewId}`, {
         method: 'DELETE',
         headers: { Authorization: `Bearer ${authToken}` },
       });
