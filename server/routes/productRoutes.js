@@ -92,19 +92,35 @@ router.post('/', verifyToken, verifyAdmin, async (req, res) => {
       safetyInfo,
     } = req.body;
 
-    if (!name || price === undefined || !category) {
-      return res.status(400).json({ success: false, message: 'Product Name, Category, and Price are required.' });
+    const trimmedName = typeof name === 'string' ? name.trim() : '';
+    const numericPrice = Number(price);
+
+    if (!trimmedName) {
+      return res.status(400).json({ success: false, message: 'Product Name is required.' });
     }
 
-    const generatedId = 'prod-' + Date.now();
+    if (price === undefined || price === null || price === '' || isNaN(numericPrice) || numericPrice < 0) {
+      return res.status(400).json({ success: false, message: 'A valid numeric Selling Price is required.' });
+    }
+
+    const trimmedCategory = typeof category === 'string' ? category.trim() : 'Aluminium Ladders';
+    const computedCategoryId = categoryId || trimmedCategory.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '');
+    const generatedId = (req.body.id && typeof req.body.id === 'string' && req.body.id.trim()) 
+      ? req.body.id.trim() 
+      : ('prod-' + Date.now());
+
+    // Sanitize images array
+    const validImages = Array.isArray(images) && images.length > 0 
+      ? images.filter(img => typeof img === 'string' && img.trim().length > 0)
+      : ['/images/hero_ladder.jpg'];
 
     const newProduct = await Product.create({
-      id: req.body.id || generatedId,
-      name,
-      category: category || 'Aluminium Ladders',
-      categoryId: categoryId || (category ? category.toLowerCase().replace(/\s+/g, '-') : 'aluminium'),
-      price: Number(price),
-      originalPrice: originalPrice ? Number(originalPrice) : Math.round(Number(price) * 1.2),
+      id: generatedId,
+      name: trimmedName,
+      category: trimmedCategory,
+      categoryId: computedCategoryId || 'aluminium',
+      price: numericPrice,
+      originalPrice: originalPrice && !isNaN(Number(originalPrice)) ? Number(originalPrice) : Math.round(numericPrice * 1.2),
       rating: 5.0,
       reviewsCount: 0,
       stock: stock || 'In Stock',
@@ -112,17 +128,17 @@ router.post('/', verifyToken, verifyAdmin, async (req, res) => {
       isNewProduct: Boolean(isNewProduct),
       material: material || 'Heavy Aluminium Alloy',
       height: height || '12 ft',
-      steps: steps ? Number(steps) : 6,
+      steps: steps && !isNaN(Number(steps)) ? Number(steps) : 6,
       weightCapacity: weightCapacity || '150 kg',
       productWeight: productWeight || '10 kg',
       foldable: foldable !== undefined ? Boolean(foldable) : true,
       usage: usage || 'Industrial & Household',
       warranty: warranty || '5 Years Warranty',
       certification: certification || 'ISO 9001 Certified',
-      images: images && images.length > 0 ? images : ['/images/hero_ladder.jpg'],
+      images: validImages.length > 0 ? validImages : ['/images/hero_ladder.jpg'],
       description: description || '',
-      features: features || [],
-      safetyInfo: safetyInfo || [],
+      features: Array.isArray(features) ? features : [],
+      safetyInfo: Array.isArray(safetyInfo) ? safetyInfo : [],
     });
 
     res.status(201).json({
@@ -143,9 +159,24 @@ router.put('/:id', verifyToken, verifyAdmin, async (req, res) => {
     const { id } = req.params;
     const updateData = { ...req.body };
 
-    if (updateData.price) updateData.price = Number(updateData.price);
-    if (updateData.originalPrice) updateData.originalPrice = Number(updateData.originalPrice);
-    if (updateData.steps) updateData.steps = Number(updateData.steps);
+    if (updateData.price !== undefined && updateData.price !== '') {
+      const p = Number(updateData.price);
+      if (!isNaN(p)) updateData.price = p;
+    }
+    if (updateData.originalPrice !== undefined && updateData.originalPrice !== '') {
+      const op = Number(updateData.originalPrice);
+      if (!isNaN(op)) updateData.originalPrice = op;
+    }
+    if (updateData.steps !== undefined && updateData.steps !== '') {
+      const s = Number(updateData.steps);
+      if (!isNaN(s)) updateData.steps = s;
+    }
+    if (Array.isArray(updateData.images)) {
+      updateData.images = updateData.images.filter(img => typeof img === 'string' && img.trim().length > 0);
+      if (updateData.images.length === 0) {
+        updateData.images = ['/images/hero_ladder.jpg'];
+      }
+    }
 
     const updatedProduct = await Product.findOneAndUpdate(
       findProductQuery(id),

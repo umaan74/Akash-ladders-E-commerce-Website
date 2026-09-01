@@ -13,7 +13,9 @@ export const ProductProvider = ({ children }) => {
   const { token } = useAuth();
 
   // Helper to reliably retrieve token from state or localStorage
-  const getAuthToken = () => token || localStorage.getItem('akash_token') || localStorage.getItem('token');
+  const getAuthToken = () => {
+    return token || localStorage.getItem('akash_token') || localStorage.getItem('token') || '';
+  };
 
   // Helper to safely parse JSON responses and avoid SyntaxError: Unexpected token '<'
   const parseJsonResponse = async (res) => {
@@ -22,7 +24,7 @@ export const ProductProvider = ({ children }) => {
       return await res.json();
     }
     const text = await res.text();
-    throw new Error(`Server error (${res.status}). Please re-login as Admin or verify backend server is running.`);
+    throw new Error(text || `Server error (${res.status}). Please verify server is running or re-login.`);
   };
 
   // Fetch products live from MongoDB backend API (/api/products)
@@ -31,7 +33,7 @@ export const ProductProvider = ({ children }) => {
     try {
       const res = await fetch(`${API_BASE_URL}/api/products`);
       const data = await parseJsonResponse(res);
-      if (res.ok && data.success && data.products && data.products.length > 0) {
+      if (res.ok && data.success && Array.isArray(data.products) && data.products.length > 0) {
         setProducts(data.products);
         setError(null);
       } else {
@@ -59,6 +61,10 @@ export const ProductProvider = ({ children }) => {
   const addProduct = async (productData) => {
     try {
       const authToken = getAuthToken();
+      if (!authToken) {
+        throw new Error('Admin authorization token not found. Please log in to your Admin account.');
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/products`, {
         method: 'POST',
         headers: {
@@ -76,7 +82,8 @@ export const ProductProvider = ({ children }) => {
       await fetchLiveProducts();
       return { success: true, message: data.message, product: data.product };
     } catch (err) {
-      return { success: false, message: err.message };
+      console.error('ProductContext addProduct Error:', err);
+      return { success: false, message: err.message || 'Error creating product' };
     }
   };
 
@@ -84,6 +91,10 @@ export const ProductProvider = ({ children }) => {
   const updateProduct = async (id, productData) => {
     try {
       const authToken = getAuthToken();
+      if (!authToken) {
+        throw new Error('Admin authorization token not found. Please log in to your Admin account.');
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/products/${id}`, {
         method: 'PUT',
         headers: {
@@ -101,7 +112,8 @@ export const ProductProvider = ({ children }) => {
       await fetchLiveProducts();
       return { success: true, message: data.message, product: data.product };
     } catch (err) {
-      return { success: false, message: err.message };
+      console.error('ProductContext updateProduct Error:', err);
+      return { success: false, message: err.message || 'Error updating product' };
     }
   };
 
@@ -109,6 +121,10 @@ export const ProductProvider = ({ children }) => {
   const deleteProduct = async (id) => {
     try {
       const authToken = getAuthToken();
+      if (!authToken) {
+        throw new Error('Admin authorization token not found. Please log in to your Admin account.');
+      }
+
       const res = await fetch(`${API_BASE_URL}/api/products/${id}`, {
         method: 'DELETE',
         headers: {
@@ -124,7 +140,8 @@ export const ProductProvider = ({ children }) => {
       await fetchLiveProducts();
       return { success: true, message: data.message };
     } catch (err) {
-      return { success: false, message: err.message };
+      console.error('ProductContext deleteProduct Error:', err);
+      return { success: false, message: err.message || 'Error deleting product' };
     }
   };
 

@@ -151,10 +151,18 @@ export const AuthProvider = ({ children }) => {
         return { success: false, message: data.message || 'Login failed. Account not found or invalid password.' };
       }
 
+      // Synchronously write to localStorage to prevent race conditions during mobile navigation
+      if (data.token) {
+        localStorage.setItem('akash_token', data.token);
+      }
+      if (data.user) {
+        localStorage.setItem('akash_user', JSON.stringify(data.user));
+      }
+
       setToken(data.token);
       setUser(data.user);
       setLoading(false);
-      return { success: true, user: data.user };
+      return { success: true, user: data.user, token: data.token };
     } catch (error) {
       console.error('Database Authentication Error:', error.message);
       setLoading(false);
@@ -181,10 +189,18 @@ export const AuthProvider = ({ children }) => {
         return { success: false, message: data.message || 'Registration failed.' };
       }
 
+      // Synchronously write to localStorage to prevent race conditions during mobile navigation
+      if (data.token) {
+        localStorage.setItem('akash_token', data.token);
+      }
+      if (data.user) {
+        localStorage.setItem('akash_user', JSON.stringify(data.user));
+      }
+
       setToken(data.token);
       setUser(data.user);
       setLoading(false);
-      return { success: true, user: data.user };
+      return { success: true, user: data.user, token: data.token };
     } catch (error) {
       console.error('Database Registration Error:', error.message);
       setLoading(false);

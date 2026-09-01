@@ -1,9 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useProducts } from '../context/ProductContext';
 import { 
   ShieldCheck, Package, Clock, CheckCircle2, Search, RefreshCw, Eye, DollarSign, 
-  Plus, Edit3, Trash2, Star, AlertCircle, X, Image as ImageIcon, Link as LinkIcon, Upload
+  Plus, Edit3, Trash2, Star, AlertCircle, X, Image as ImageIcon, Link as LinkIcon, Upload, Loader2
 } from 'lucide-react';
 
 const PRESET_IMAGES = [
@@ -48,6 +48,8 @@ const AdminDashboard = () => {
   const [editingProduct, setEditingProduct] = useState(null); // null = Add, object = Edit
   const [newImageUrl, setNewImageUrl] = useState('');
   const [savingProduct, setSavingProduct] = useState(false);
+  const [uploadingImage, setUploadingImage] = useState(false);
+  const fileInputRef = useRef(null);
   const [productFormData, setProductFormData] = useState({
     name: '',
     category: 'Aluminium Ladders',
@@ -127,24 +129,83 @@ const AdminDashboard = () => {
     setNewImageUrl('');
   };
 
-  // DEVICE FILE UPLOAD HANDLER
-  const handleDeviceFileUpload = (e) => {
+  // CLIENT-SIDE CANVAS IMAGE COMPRESSION (Handles high-res mobile camera photos & formats)
+  const compressImageFile = (file, maxWidth = 1200, maxHeight = 1200, quality = 0.82) => {
+    return new Promise((resolve, reject) => {
+      // If SVG format, keep raw
+      if (file.type === 'image/svg+xml') {
+        const reader = new FileReader();
+        reader.onload = () => resolve(reader.result);
+        reader.onerror = reject;
+        reader.readAsDataURL(file);
+        return;
+      }
+
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          let { width, height } = img;
+
+          // Scale down maintaining aspect ratio
+          if (width > height) {
+            if (width > maxWidth) {
+              height = Math.round((height * maxWidth) / width);
+              width = maxWidth;
+            }
+          } else {
+            if (height > maxHeight) {
+              width = Math.round((width * maxHeight) / height);
+              height = maxHeight;
+            }
+          }
+
+          const canvas = document.createElement('canvas');
+          canvas.width = width;
+          canvas.height = height;
+
+          const ctx = canvas.getContext('2d');
+          // Fill white background for transparent PNG/WebP conversions
+          ctx.fillStyle = '#FFFFFF';
+          ctx.fillRect(0, 0, width, height);
+          ctx.drawImage(img, 0, 0, width, height);
+
+          // Convert to optimized JPEG data URL (~100-250KB for fast mobile transmission)
+          const dataUrl = canvas.toDataURL('image/jpeg', quality);
+          resolve(dataUrl);
+        };
+        img.onerror = () => {
+          // Fallback to raw data URL if canvas rendering fails
+          resolve(event.target.result);
+        };
+        img.src = event.target.result;
+      };
+      reader.onerror = reject;
+      reader.readAsDataURL(file);
+    });
+  };
+
+  // DEVICE FILE UPLOAD HANDLER (Mobile & Desktop compatible)
+  const handleDeviceFileUpload = async (e) => {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (file.size > 10 * 1024 * 1024) {
-      alert('Selected image file is too large. Please select an image under 10MB.');
-      return;
-    }
-
-    const reader = new FileReader();
-    reader.onloadend = () => {
-      if (reader.result) {
-        handleAddImage(reader.result);
+    setUploadingImage(true);
+    try {
+      const optimizedDataUrl = await compressImageFile(file, 1200, 1200, 0.82);
+      if (optimizedDataUrl) {
+        handleAddImage(optimizedDataUrl);
       }
-    };
-    reader.readAsDataURL(file);
-    e.target.value = ''; // Reset file input
+    } catch (err) {
+      console.error('Error processing device image upload:', err);
+      alert('Could not process selected image file. Please try another image.');
+    } finally {
+      setUploadingImage(false);
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      e.target.value = ''; // Reset file input
+    }
   };
 
   const handleRemoveImage = (indexToRemove) => {
@@ -205,8 +266,16 @@ const AdminDashboard = () => {
 
   const handleSaveProduct = async (e) => {
     e.preventDefault();
-    if (!productFormData.name || productFormData.price === '' || productFormData.price === null) {
-      alert('Please provide product name and valid selling price.');
+    const cleanName = productFormData.name?.trim();
+    const cleanPrice = productFormData.price;
+
+    if (!cleanName) {
+      alert('Please provide a valid product name.');
+      return;
+    }
+
+    if (cleanPrice === '' || cleanPrice === null || isNaN(Number(cleanPrice)) || Number(cleanPrice) < 0) {
+      alert('Please provide a valid numeric selling price.');
       return;
     }
 
@@ -218,28 +287,45 @@ const AdminDashboard = () => {
     setSavingProduct(true);
     const targetId = editingProduct ? (editingProduct.id || editingProduct._id) : null;
 
-    if (editingProduct && targetId) {
-      // Edit / Update Existing Product
-      const res = await updateProduct(targetId, productFormData);
-      if (res.success) {
-        showNotification(`Product "${productFormData.name}" updated successfully in MongoDB database!`);
-        setProductModalOpen(false);
-        refreshProducts();
+    const payload = {
+      ...productFormData,
+      name: cleanName,
+      price: Number(cleanPrice),
+      originalPrice: productFormData.originalPrice && !isNaN(Number(productFormData.originalPrice)) 
+        ? Number(productFormData.originalPrice) 
+        : Math.round(Number(cleanPrice) * 1.2),
+      steps: productFormData.steps && !isNaN(Number(productFormData.steps)) 
+        ? Number(productFormData.steps) 
+        : 6,
+    };
+
+    try {
+      if (editingProduct && targetId) {
+        // Edit / Update Existing Product
+        const res = await updateProduct(targetId, payload);
+        if (res.success) {
+          showNotification(`Product "${cleanName}" updated successfully in MongoDB database!`);
+          setProductModalOpen(false);
+          refreshProducts();
+        } else {
+          alert('Update Failed: ' + (res.message || 'Server error'));
+        }
       } else {
-        alert('Update Failed: ' + res.message);
+        // Add New Product
+        const res = await addProduct(payload);
+        if (res.success) {
+          showNotification(`New product "${cleanName}" added to MongoDB database!`);
+          setProductModalOpen(false);
+          refreshProducts();
+        } else {
+          alert('Add Failed: ' + (res.message || 'Server error'));
+        }
       }
-    } else {
-      // Add New Product
-      const res = await addProduct(productFormData);
-      if (res.success) {
-        showNotification(`New product "${productFormData.name}" added to MongoDB database!`);
-        setProductModalOpen(false);
-        refreshProducts();
-      } else {
-        alert('Add Failed: ' + res.message);
-      }
+    } catch (err) {
+      alert('Product Operation Failed: ' + (err.message || 'Network error'));
+    } finally {
+      setSavingProduct(false);
     }
-    setSavingProduct(false);
   };
 
   const handleDeleteProduct = async (prodId) => {
@@ -741,227 +827,272 @@ const AdminDashboard = () => {
       {/* MODAL: ADD / EDIT PRODUCT */}
       {/* =================================================== */}
       {productModalOpen && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-3xl w-full my-8 p-6 sm:p-8 space-y-6 shadow-2xl">
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <h3 className="text-xl font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <Edit3 className="w-5 h-5 text-amber-500" />
-                {editingProduct ? `Edit Product: ${editingProduct.name}` : 'Add New Ladder Product'}
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl max-w-3xl w-full max-h-[92dvh] sm:max-h-[88vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 sm:py-4 shrink-0 bg-white dark:bg-slate-900">
+              <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white flex items-center gap-2 min-w-0">
+                <Edit3 className="w-4 h-4 sm:w-5 sm:h-5 text-amber-500 shrink-0" />
+                <span className="truncate">{editingProduct ? `Edit: ${editingProduct.name}` : 'Add New Ladder Product'}</span>
               </h3>
-              <button onClick={() => setProductModalOpen(false)} className="p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white">
+              <button 
+                type="button"
+                onClick={() => setProductModalOpen(false)} 
+                className="p-1.5 sm:p-2 text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors shrink-0 touch-manipulation"
+                aria-label="Close modal"
+              >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveProduct} className="space-y-5 text-xs">
+            {/* Modal Form */}
+            <form onSubmit={handleSaveProduct} className="flex flex-col flex-1 overflow-hidden min-h-0">
               
-              {/* Product Basic Details */}
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Product Name *</label>
-                <input
-                  type="text"
-                  required
-                  value={productFormData.name}
-                  onChange={(e) => setProductFormData({ ...productFormData, name: e.target.value })}
-                  placeholder="e.g. Industrial Heavy-Duty Aluminum Ladder 24ft"
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Scrollable Form Body */}
+              <div className="overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-4 sm:space-y-5 text-xs flex-1 overscroll-contain">
+                
+                {/* Product Basic Details */}
                 <div>
-                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Category</label>
-                  <select
-                    value={productFormData.category}
-                    onChange={(e) => setProductFormData({ 
-                      ...productFormData, 
-                      category: e.target.value,
-                      categoryId: e.target.value.toLowerCase().replace(/\s+/g, '-')
-                    })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
-                  >
-                    <option value="Aluminium Ladders">Aluminium Ladders</option>
-                    <option value="Folding Ladders">Folding Ladders</option>
-                    <option value="Step Ladders">Step Ladders</option>
-                    <option value="Extension Ladders">Extension Ladders</option>
-                    <option value="Telescopic Ladders">Telescopic Ladders</option>
-                    <option value="Industrial Ladders">Industrial Ladders</option>
-                    <option value="Customized Ladders">Customized Ladders</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Stock Status</label>
-                  <select
-                    value={productFormData.stock}
-                    onChange={(e) => setProductFormData({ ...productFormData, stock: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-bold text-amber-600 dark:text-amber-400"
-                  >
-                    <option value="In Stock">In Stock</option>
-                    <option value="Limited Stock">Limited Stock</option>
-                    <option value="Made to Order">Made to Order</option>
-                    <option value="Out of Stock">Out of Stock</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Selling Price (₹) *</label>
+                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Product Name *</label>
                   <input
-                    type="number"
+                    type="text"
                     required
-                    value={productFormData.price}
-                    onChange={(e) => setProductFormData({ ...productFormData, price: e.target.value })}
-                    placeholder="e.g. 18500"
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white font-extrabold focus:outline-none focus:border-amber-500 font-mono"
+                    value={productFormData.name}
+                    onChange={(e) => setProductFormData({ ...productFormData, name: e.target.value })}
+                    placeholder="e.g. Industrial Heavy-Duty Aluminum Ladder 24ft"
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 sm:py-2 text-base sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
                   />
                 </div>
 
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Original Price / MRP (₹)</label>
-                  <input
-                    type="number"
-                    value={productFormData.originalPrice}
-                    onChange={(e) => setProductFormData({ ...productFormData, originalPrice: e.target.value })}
-                    placeholder="e.g. 24999"
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-mono"
-                  />
-                </div>
-              </div>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Category</label>
+                    <select
+                      value={productFormData.category}
+                      onChange={(e) => setProductFormData({ 
+                        ...productFormData, 
+                        category: e.target.value,
+                        categoryId: e.target.value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '')
+                      })}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 sm:py-2 text-base sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 cursor-pointer"
+                    >
+                      <option value="Aluminium Ladders">Aluminium Ladders</option>
+                      <option value="Folding Ladders">Folding Ladders</option>
+                      <option value="Step Ladders">Step Ladders</option>
+                      <option value="Extension Ladders">Extension Ladders</option>
+                      <option value="Telescopic Ladders">Telescopic Ladders</option>
+                      <option value="Industrial Ladders">Industrial Ladders</option>
+                      <option value="Customized Ladders">Customized Ladders</option>
+                    </select>
+                  </div>
 
-              {/* IMAGE MANAGEMENT SECTION */}
-              <div className="bg-slate-50 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-2">
-                  <label className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <ImageIcon className="w-4 h-4" /> Product Image Gallery ({productFormData.images?.length || 0})
-                  </label>
-                  
-                  {/* DEVICE FILE UPLOAD BUTTON */}
-                  <label className="cursor-pointer px-3.5 py-1.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 border border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold rounded-xl text-xs flex items-center gap-1.5 transition-all shadow-md active:scale-95">
-                    <Upload className="w-4 h-4 text-amber-500" />
-                    <span>Upload Image from Device</span>
-                    <input 
-                      type="file" 
-                      accept="image/*" 
-                      onChange={handleDeviceFileUpload} 
-                      className="hidden" 
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Stock Status</label>
+                    <select
+                      value={productFormData.stock}
+                      onChange={(e) => setProductFormData({ ...productFormData, stock: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 sm:py-2 text-base sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-bold text-amber-600 dark:text-amber-400 cursor-pointer"
+                    >
+                      <option value="In Stock">In Stock</option>
+                      <option value="Limited Stock">Limited Stock</option>
+                      <option value="Made to Order">Made to Order</option>
+                      <option value="Out of Stock">Out of Stock</option>
+                    </select>
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4">
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Selling Price (₹) *</label>
+                    <input
+                      type="number"
+                      required
+                      min="0"
+                      value={productFormData.price}
+                      onChange={(e) => setProductFormData({ ...productFormData, price: e.target.value })}
+                      placeholder="e.g. 18500"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 sm:py-2 text-base sm:text-sm text-slate-900 dark:text-white font-extrabold focus:outline-none focus:border-amber-500 font-mono"
                     />
-                  </label>
+                  </div>
+
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Original Price / MRP (₹)</label>
+                    <input
+                      type="number"
+                      min="0"
+                      value={productFormData.originalPrice}
+                      onChange={(e) => setProductFormData({ ...productFormData, originalPrice: e.target.value })}
+                      placeholder="e.g. 24999"
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3.5 py-2.5 sm:py-2 text-base sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 font-mono"
+                    />
+                  </div>
                 </div>
 
-                {/* Current Image Thumbnails */}
-                <div className="flex flex-wrap gap-3">
-                  {productFormData.images?.map((img, idx) => (
-                    <div key={idx} className="relative group w-20 h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1">
-                      <img src={img} alt="" className="w-full h-full object-contain" />
+                {/* IMAGE MANAGEMENT SECTION */}
+                <div className="bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 sm:p-4 space-y-3">
+                  <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-2.5">
+                    <label className="text-xs font-bold text-amber-600 dark:text-amber-400 uppercase tracking-wider flex items-center gap-1.5">
+                      <ImageIcon className="w-4 h-4" /> Product Image Gallery ({productFormData.images?.length || 0})
+                    </label>
+                    
+                    {/* DEVICE FILE UPLOAD BUTTON (Mobile Camera & Gallery Optimized) */}
+                    <div>
+                      <input 
+                        ref={fileInputRef}
+                        id="device-image-upload"
+                        type="file" 
+                        accept="image/png, image/jpeg, image/webp, image/gif, image/*" 
+                        onChange={handleDeviceFileUpload} 
+                        className="sr-only"
+                        tabIndex={-1}
+                        aria-hidden="true"
+                      />
                       <button
                         type="button"
-                        onClick={() => handleRemoveImage(idx)}
-                        className="absolute top-1 right-1 bg-rose-600 text-white p-1 rounded-md opacity-90 hover:opacity-100 transition-opacity"
-                        title="Remove Image"
+                        onClick={() => fileInputRef.current?.click()}
+                        disabled={uploadingImage}
+                        className="w-full sm:w-auto px-3.5 py-2.5 sm:py-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 border border-amber-500/40 text-amber-600 dark:text-amber-400 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-all shadow-sm active:scale-95 disabled:opacity-60 cursor-pointer min-h-[40px] touch-manipulation"
                       >
-                        <X className="w-3 h-3" />
+                        {uploadingImage ? (
+                          <>
+                            <Loader2 className="w-4 h-4 animate-spin text-amber-500" />
+                            <span>Optimizing Image...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Upload className="w-4 h-4 text-amber-500" />
+                            <span>Upload Image from Device</span>
+                          </>
+                        )}
                       </button>
                     </div>
-                  ))}
-                </div>
-
-                {/* Add Image URL Input */}
-                <div className="flex gap-2 pt-1">
-                  <div className="relative flex-grow">
-                    <LinkIcon className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3" />
-                    <input
-                      type="text"
-                      value={newImageUrl}
-                      onChange={(e) => setNewImageUrl(e.target.value)}
-                      placeholder="Paste image URL (e.g. /images/scaffolding_tower.jpg or https://...)"
-                      className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2 text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
-                    />
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => handleAddImage()}
-                    className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs shrink-0 flex items-center gap-1"
-                  >
-                    <Plus className="w-3.5 h-3.5" /> Add URL
-                  </button>
-                </div>
 
-                {/* Preset Image Quick Selector */}
-                <div className="pt-2">
-                  <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block mb-1.5">Quick Select Catalog Preset Images:</span>
-                  <div className="flex flex-wrap gap-1.5">
-                    {PRESET_IMAGES.map((preset, idx) => (
-                      <button
-                        key={idx}
-                        type="button"
-                        onClick={() => handleAddImage(preset.url)}
-                        className="px-2.5 py-1 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-[11px] transition-colors"
-                      >
-                        + {preset.label}
-                      </button>
+                  {/* Current Image Thumbnails */}
+                  <div className="flex flex-wrap gap-2 sm:gap-2.5">
+                    {productFormData.images?.map((img, idx) => (
+                      <div key={idx} className="relative group w-16 h-16 sm:w-20 sm:h-20 rounded-xl overflow-hidden border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 p-1 shrink-0">
+                        <img src={img} alt={`Product thumbnail ${idx + 1}`} className="w-full h-full object-contain" />
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveImage(idx)}
+                          className="absolute top-1 right-1 bg-rose-600 text-white w-5 h-5 rounded-md flex items-center justify-center opacity-90 hover:opacity-100 transition-opacity shadow-sm touch-manipulation"
+                          title="Remove Image"
+                        >
+                          <X className="w-3 h-3" />
+                        </button>
+                      </div>
                     ))}
                   </div>
-                </div>
-              </div>
 
-              {/* Technical Specifications */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  {/* Add Image URL Input */}
+                  <div className="flex flex-col sm:flex-row gap-2 pt-1">
+                    <div className="relative flex-1 min-w-0">
+                      <LinkIcon className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-3.5 sm:top-3" />
+                      <input
+                        type="text"
+                        value={newImageUrl}
+                        onChange={(e) => setNewImageUrl(e.target.value)}
+                        placeholder="Paste image URL (/images/... or https://...)"
+                        className="w-full bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl pl-9 pr-3 py-2.5 sm:py-2 text-base sm:text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                      />
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => handleAddImage()}
+                      className="w-full sm:w-auto px-4 py-2.5 sm:py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center gap-1 cursor-pointer active:scale-95 transition-all shrink-0 touch-manipulation"
+                    >
+                      <Plus className="w-3.5 h-3.5" /> Add URL
+                    </button>
+                  </div>
+
+                  {/* Preset Image Quick Selector */}
+                  <div className="pt-1">
+                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-semibold block mb-1.5">Quick Select Catalog Preset Images:</span>
+                    <div className="flex flex-wrap gap-1.5">
+                      {PRESET_IMAGES.map((preset, idx) => (
+                        <button
+                          key={idx}
+                          type="button"
+                          onClick={() => handleAddImage(preset.url)}
+                          className="px-2.5 py-1.5 sm:py-1 bg-white dark:bg-slate-900 hover:bg-slate-100 dark:hover:bg-slate-800 border border-slate-300 dark:border-slate-700 text-slate-700 dark:text-slate-300 rounded-lg text-xs sm:text-[11px] transition-colors cursor-pointer active:scale-95 touch-manipulation"
+                        >
+                          + {preset.label}
+                        </button>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Technical Specifications */}
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Material Composition</label>
+                    <input
+                      type="text"
+                      value={productFormData.material}
+                      onChange={(e) => setProductFormData({ ...productFormData, material: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 sm:py-2 text-base sm:text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Max Height</label>
+                    <input
+                      type="text"
+                      value={productFormData.height}
+                      onChange={(e) => setProductFormData({ ...productFormData, height: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 sm:py-2 text-base sm:text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Weight Load Capacity</label>
+                    <input
+                      type="text"
+                      value={productFormData.weightCapacity}
+                      onChange={(e) => setProductFormData({ ...productFormData, weightCapacity: e.target.value })}
+                      className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2.5 sm:py-2 text-base sm:text-xs text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                    />
+                  </div>
+                </div>
+
                 <div>
-                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Material Composition</label>
-                  <input
-                    type="text"
-                    value={productFormData.material}
-                    onChange={(e) => setProductFormData({ ...productFormData, material: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
+                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Product Description</label>
+                  <textarea
+                    rows={3}
+                    value={productFormData.description}
+                    onChange={(e) => setProductFormData({ ...productFormData, description: e.target.value })}
+                    placeholder="Describe ladder engineering, safety locks, and industrial certifications..."
+                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-base sm:text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500 resize-none"
                   />
                 </div>
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Max Height</label>
-                  <input
-                    type="text"
-                    value={productFormData.height}
-                    onChange={(e) => setProductFormData({ ...productFormData, height: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
-                  />
-                </div>
-                <div>
-                  <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Weight Load Capacity</label>
-                  <input
-                    type="text"
-                    value={productFormData.weightCapacity}
-                    onChange={(e) => setProductFormData({ ...productFormData, weightCapacity: e.target.value })}
-                    className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl px-3 py-2 text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
-                  />
-                </div>
+
               </div>
 
-              <div>
-                <label className="block text-slate-600 dark:text-slate-400 mb-1 font-semibold">Product Description</label>
-                <textarea
-                  rows={3}
-                  value={productFormData.description}
-                  onChange={(e) => setProductFormData({ ...productFormData, description: e.target.value })}
-                  placeholder="Describe ladder engineering, safety locks, and industrial certifications..."
-                  className="w-full bg-slate-50 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-3 text-sm text-slate-900 dark:text-white focus:outline-none focus:border-amber-500"
-                />
-              </div>
-
-              <div className="pt-4 flex justify-end gap-3 border-t border-slate-200 dark:border-slate-800">
+              {/* Sticky / Fixed Footer Buttons (Always Accessible on Mobile) */}
+              <div className="px-4 py-3 sm:px-6 sm:py-4 bg-slate-50 dark:bg-slate-950 flex items-center justify-end gap-2.5 sm:gap-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
                 <button
                   type="button"
                   onClick={() => setProductModalOpen(false)}
-                  className="px-5 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-xl font-bold"
+                  className="flex-1 sm:flex-initial px-4 sm:px-5 py-2.5 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-900 dark:text-white rounded-xl font-bold text-xs sm:text-sm transition-colors cursor-pointer text-center touch-manipulation"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  disabled={savingProduct}
-                  className="px-7 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl shadow-lg shadow-amber-500/20 disabled:opacity-50"
+                  disabled={savingProduct || uploadingImage}
+                  className="flex-1 sm:flex-initial px-5 sm:px-7 py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-black rounded-xl shadow-lg shadow-amber-500/20 disabled:opacity-50 text-xs sm:text-sm transition-all active:scale-95 cursor-pointer flex items-center justify-center gap-2 touch-manipulation"
                 >
-                  {savingProduct ? 'Saving to Database...' : editingProduct ? 'Save & Update Product' : 'Add Product'}
+                  {savingProduct ? (
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin text-slate-950" />
+                      <span>Saving...</span>
+                    </>
+                  ) : editingProduct ? (
+                    'Save & Update'
+                  ) : (
+                    'Add Product'
+                  )}
                 </button>
               </div>
             </form>
@@ -973,25 +1104,27 @@ const AdminDashboard = () => {
       {/* MODAL: DELETE CONFIRMATION */}
       {/* =================================================== */}
       {deleteProductConfirm && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-md w-full p-6 text-center space-y-4 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-4 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl max-w-sm sm:max-w-md w-full p-5 sm:p-6 text-center space-y-4 shadow-2xl animate-in fade-in zoom-in-95 duration-150">
             <div className="w-12 h-12 bg-rose-500/20 text-rose-500 rounded-full flex items-center justify-center mx-auto">
               <AlertCircle className="w-6 h-6" />
             </div>
-            <h3 className="text-xl font-black text-slate-900 dark:text-white">Delete Product?</h3>
+            <h3 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white">Delete Product?</h3>
             <p className="text-xs text-slate-600 dark:text-slate-400">
               Are you sure you want to delete <strong className="text-slate-900 dark:text-white">{deleteProductConfirm.name}</strong> from MongoDB? This action cannot be undone.
             </p>
-            <div className="flex gap-3 pt-2">
+            <div className="flex gap-2.5 sm:gap-3 pt-2">
               <button
+                type="button"
                 onClick={() => setDeleteProductConfirm(null)}
-                className="w-1/2 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-bold text-xs"
+                className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-900 dark:text-white rounded-xl font-bold text-xs hover:bg-slate-200 dark:hover:bg-slate-700 transition-colors"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={() => handleDeleteProduct(deleteProductConfirm.id || deleteProductConfirm._id)}
-                className="w-1/2 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-600/20"
+                className="flex-1 py-2.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold text-xs shadow-lg shadow-rose-600/20 active:scale-95 transition-all"
               >
                 Delete from DB
               </button>
@@ -1004,62 +1137,68 @@ const AdminDashboard = () => {
       {/* ORDER INSPECTION MODAL */}
       {/* =================================================== */}
       {selectedOrder && (
-        <div className="fixed inset-0 z-50 bg-slate-950/70 backdrop-blur-md flex items-center justify-center p-4 overflow-y-auto">
-          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl max-w-2xl w-full my-8 p-6 space-y-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-md flex items-center justify-center p-2 sm:p-4 md:p-6 overflow-hidden">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl sm:rounded-3xl max-w-2xl w-full max-h-[92dvh] sm:max-h-[88vh] flex flex-col shadow-2xl overflow-hidden animate-in fade-in zoom-in-95 duration-150">
             
-            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 pb-4">
-              <div>
-                <span className="text-xs uppercase tracking-widest font-bold text-amber-500">Admin Order Inspection</span>
-                <h3 className="text-xl font-black text-slate-900 dark:text-white mt-0.5">Order {selectedOrder.orderId}</h3>
+            <div className="flex items-center justify-between border-b border-slate-200 dark:border-slate-800 px-4 py-3 sm:px-6 sm:py-4 shrink-0 bg-white dark:bg-slate-900">
+              <div className="min-w-0 pr-2">
+                <span className="text-[10px] sm:text-xs uppercase tracking-widest font-bold text-amber-500">Admin Order Inspection</span>
+                <h3 className="text-base sm:text-xl font-black text-slate-900 dark:text-white mt-0.5 truncate">Order {selectedOrder.orderId}</h3>
               </div>
-              <button onClick={() => setSelectedOrder(null)} className="px-3 py-1 text-xs text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 font-bold">
+              <button 
+                type="button" 
+                onClick={() => setSelectedOrder(null)} 
+                className="px-3 py-1.5 text-xs text-slate-400 hover:text-slate-900 dark:hover:text-white bg-slate-100 dark:bg-slate-950 rounded-xl border border-slate-200 dark:border-slate-800 font-bold shrink-0 touch-manipulation"
+              >
                 Close
               </button>
             </div>
 
-            <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 grid grid-cols-2 gap-3 text-xs">
-              <div>
-                <span className="text-slate-500 font-semibold block">Customer Name</span>
-                <span className="text-slate-900 dark:text-white font-bold text-sm">{selectedOrder.customerDetails?.name}</span>
+            <div className="overflow-y-auto px-4 py-4 sm:px-6 sm:py-5 space-y-4 sm:space-y-6 text-xs flex-1 overscroll-contain">
+              <div className="bg-slate-50 dark:bg-slate-950 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+                <div>
+                  <span className="text-slate-500 font-semibold block">Customer Name</span>
+                  <span className="text-slate-900 dark:text-white font-bold text-sm">{selectedOrder.customerDetails?.name}</span>
+                </div>
+                <div>
+                  <span className="text-slate-500 font-semibold block">Phone</span>
+                  <span className="text-slate-900 dark:text-white font-bold">{selectedOrder.customerDetails?.phone}</span>
+                </div>
+                <div className="sm:col-span-2">
+                  <span className="text-slate-500 font-semibold block">Delivery Address</span>
+                  <span className="text-slate-600 dark:text-slate-300 font-medium">
+                    {selectedOrder.customerDetails?.address}, {selectedOrder.customerDetails?.city} - {selectedOrder.customerDetails?.pincode}
+                  </span>
+                </div>
               </div>
-              <div>
-                <span className="text-slate-500 font-semibold block">Phone</span>
-                <span className="text-slate-900 dark:text-white font-bold">{selectedOrder.customerDetails?.phone}</span>
-              </div>
-              <div className="col-span-2">
-                <span className="text-slate-500 font-semibold block">Delivery Address</span>
-                <span className="text-slate-600 dark:text-slate-300 font-medium">
-                  {selectedOrder.customerDetails?.address}, {selectedOrder.customerDetails?.city} - {selectedOrder.customerDetails?.pincode}
-                </span>
-              </div>
-            </div>
 
-            <div className="space-y-2">
-              <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Itemized Breakdown</h4>
-              <div className="bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-900">
-                {selectedOrder.items?.map((item, idx) => (
-                  <div key={idx} className="p-3 flex items-center justify-between text-xs">
-                    <div className="flex items-center gap-3">
-                      {item.image && (
-                        <img src={item.image} alt={item.name} className="w-10 h-10 rounded object-cover" />
-                      )}
-                      <div>
-                        <p className="text-slate-900 dark:text-white font-bold">{item.name}</p>
-                        <p className="text-slate-500 dark:text-slate-400">Quantity: {item.quantity} × ₹{item.price?.toLocaleString('en-IN')}</p>
+              <div className="space-y-2">
+                <h4 className="text-xs font-bold uppercase tracking-wider text-slate-500 dark:text-slate-400">Itemized Breakdown</h4>
+                <div className="bg-slate-50 dark:bg-slate-950 rounded-2xl border border-slate-200 dark:border-slate-800 divide-y divide-slate-200 dark:divide-slate-900">
+                  {selectedOrder.items?.map((item, idx) => (
+                    <div key={idx} className="p-3 flex items-center justify-between text-xs gap-2">
+                      <div className="flex items-center gap-3 min-w-0">
+                        {item.image && (
+                          <img src={item.image} alt={item.name} className="w-10 h-10 rounded object-cover shrink-0" />
+                        )}
+                        <div className="min-w-0">
+                          <p className="text-slate-900 dark:text-white font-bold truncate">{item.name}</p>
+                          <p className="text-slate-500 dark:text-slate-400 text-[11px]">Qty: {item.quantity} × ₹{item.price?.toLocaleString('en-IN')}</p>
+                        </div>
                       </div>
+                      <span className="text-amber-600 dark:text-amber-400 font-bold text-xs sm:text-sm shrink-0">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
                     </div>
-                    <span className="text-amber-600 dark:text-amber-400 font-bold text-sm">₹{(item.price * item.quantity).toLocaleString('en-IN')}</span>
-                  </div>
-                ))}
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="bg-slate-50 dark:bg-slate-950 p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
-              <div className="flex justify-between"><span>Subtotal</span><span>₹{selectedOrder.subtotal?.toLocaleString('en-IN')}</span></div>
-              <div className="flex justify-between"><span>GST (18%)</span><span>₹{selectedOrder.gst?.toLocaleString('en-IN')}</span></div>
-              <div className="flex justify-between text-sm font-bold text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-800">
-                <span>Total Revenue</span>
-                <span className="text-amber-600 dark:text-amber-400">₹{selectedOrder.total?.toLocaleString('en-IN')}</span>
+              <div className="bg-slate-50 dark:bg-slate-950 p-3.5 sm:p-4 rounded-2xl border border-slate-200 dark:border-slate-800 space-y-1.5 text-xs text-slate-600 dark:text-slate-300">
+                <div className="flex justify-between"><span>Subtotal</span><span>₹{selectedOrder.subtotal?.toLocaleString('en-IN')}</span></div>
+                <div className="flex justify-between"><span>GST (18%)</span><span>₹{selectedOrder.gst?.toLocaleString('en-IN')}</span></div>
+                <div className="flex justify-between text-sm font-bold text-slate-900 dark:text-white pt-2 border-t border-slate-200 dark:border-slate-800">
+                  <span>Total Revenue</span>
+                  <span className="text-amber-600 dark:text-amber-400">₹{selectedOrder.total?.toLocaleString('en-IN')}</span>
+                </div>
               </div>
             </div>
 
