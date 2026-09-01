@@ -76,80 +76,92 @@ const Cart = () => {
         
         {/* Left Column: Cart Items List */}
         <div className="lg:col-span-8 space-y-4">
-          {cart.map((item) => (
-            <div 
-              key={item.product.id}
-              className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors hover:border-slate-300 dark:hover:border-slate-700 shadow-sm"
-            >
-              {/* Product Thumbnail & Details */}
-              <div className="flex items-center gap-4 w-full sm:w-auto">
-                <img
-                  src={item.product.images[0]}
-                  alt={item.product.name}
-                  className="w-20 h-20 object-cover rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shrink-0"
-                />
-                <div className="min-w-0">
-                  <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
-                    {item.product.category}
-                  </span>
-                  <Link 
-                    to={`/products/${item.product.id}`}
-                    className="block text-slate-900 dark:text-white font-bold text-sm sm:text-base hover:text-amber-500 transition-colors truncate max-w-xs mt-1"
-                  >
-                    {item.product.name}
-                  </Link>
-                  <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                    {item.product.material} • {item.product.height}
-                  </p>
-                  <p className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-1 sm:hidden">
-                    ₹{item.product.price.toLocaleString('en-IN')}
-                  </p>
-                </div>
-              </div>
+          {cart.map((item) => {
+            if (!item || !item.product) return null;
+            const itemProd = item.product;
+            const itemProdId = itemProd.id || itemProd._id;
+            const itemPrice = Number(itemProd.price || 0);
+            const itemImage = (Array.isArray(itemProd.images) && itemProd.images.length > 0) ? itemProd.images[0] : '/images/hero_ladder.jpg';
 
-              {/* Quantity Selector, Price & Delete */}
-              <div className="flex items-center justify-between w-full sm:w-auto gap-6 border-t sm:border-t-0 border-slate-200 dark:border-slate-800/80 pt-3 sm:pt-0">
-                
-                {/* Quantity modifier */}
-                <div className="flex items-center bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-1">
-                  <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity - 1)}
-                    className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg"
-                  >
-                    <Minus className="w-3.5 h-3.5" />
-                  </button>
-                  <span className="px-3 font-bold text-xs text-slate-900 dark:text-white">{item.quantity}</span>
-                  <button
-                    onClick={() => updateQuantity(item.product.id, item.quantity + 1)}
-                    className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg"
-                  >
-                    <Plus className="w-3.5 h-3.5" />
-                  </button>
-                </div>
-
-                {/* Subtotal Item Price */}
-                <div className="text-right hidden sm:block">
-                  <div className="text-slate-900 dark:text-white font-bold text-base">
-                    ₹{(item.product.price * item.quantity).toLocaleString('en-IN')}
-                  </div>
-                  <div className="text-[11px] text-slate-400 dark:text-slate-500">
-                    ₹{item.product.price.toLocaleString('en-IN')} each
+            return (
+              <div 
+                key={itemProdId}
+                className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 p-4 sm:p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 transition-colors hover:border-slate-300 dark:hover:border-slate-700 shadow-sm"
+              >
+                {/* Product Thumbnail & Details */}
+                <div className="flex items-center gap-4 w-full sm:w-auto">
+                  <img
+                    src={itemImage}
+                    alt={itemProd.name || 'Ladder'}
+                    className="w-20 h-20 object-cover rounded-xl bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-800 shrink-0"
+                    onError={(e) => {
+                      e.target.onerror = null;
+                      e.target.src = '/images/hero_ladder.jpg';
+                    }}
+                  />
+                  <div className="min-w-0">
+                    <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+                      {itemProd.category || 'Ladders'}
+                    </span>
+                    <Link 
+                      to={`/products/${itemProdId}`}
+                      className="block text-slate-900 dark:text-white font-bold text-sm sm:text-base hover:text-amber-500 transition-colors truncate max-w-xs mt-1"
+                    >
+                      {itemProd.name}
+                    </Link>
+                    <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+                      {itemProd.material || 'Aluminium'} • {itemProd.height || 'Standard'}
+                    </p>
+                    <p className="text-amber-600 dark:text-amber-400 font-bold text-sm mt-1 sm:hidden">
+                      ₹{itemPrice.toLocaleString('en-IN')}
+                    </p>
                   </div>
                 </div>
 
-                {/* Remove button */}
-                <button
-                  onClick={() => removeFromCart(item.product.id)}
-                  className="p-2 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
-                  title="Remove item"
-                >
-                  <Trash2 className="w-4 h-4" />
-                </button>
+                {/* Quantity Selector, Price & Delete */}
+                <div className="flex items-center justify-between w-full sm:w-auto gap-6 border-t sm:border-t-0 border-slate-200 dark:border-slate-800/80 pt-3 sm:pt-0">
+                  
+                  {/* Quantity modifier */}
+                  <div className="flex items-center bg-slate-100 dark:bg-slate-950 border border-slate-300 dark:border-slate-700 rounded-xl p-1">
+                    <button
+                      onClick={() => updateQuantity(itemProdId, item.quantity - 1)}
+                      className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg"
+                    >
+                      <Minus className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="px-3 font-bold text-xs text-slate-900 dark:text-white">{item.quantity}</span>
+                    <button
+                      onClick={() => updateQuantity(itemProdId, item.quantity + 1)}
+                      className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-lg"
+                    >
+                      <Plus className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+
+                  {/* Subtotal Item Price */}
+                  <div className="text-right hidden sm:block">
+                    <div className="text-slate-900 dark:text-white font-bold text-base">
+                      ₹{(itemPrice * item.quantity).toLocaleString('en-IN')}
+                    </div>
+                    <div className="text-[11px] text-slate-400 dark:text-slate-500">
+                      ₹{itemPrice.toLocaleString('en-IN')} each
+                    </div>
+                  </div>
+
+                  {/* Remove button */}
+                  <button
+                    onClick={() => removeFromCart(itemProdId)}
+                    className="p-2 text-slate-400 hover:text-rose-500 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors"
+                    title="Remove item"
+                  >
+                    <Trash2 className="w-4 h-4" />
+                  </button>
+
+                </div>
 
               </div>
-
-            </div>
-          ))}
+            );
+          })}
 
           <div className="pt-2 flex justify-between items-center">
             <Link to="/products" className="text-xs text-amber-600 dark:text-amber-400 hover:underline font-bold">

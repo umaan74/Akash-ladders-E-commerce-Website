@@ -18,12 +18,15 @@ const SearchModal = ({ onClose }) => {
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [onClose]);
 
-  const filteredProducts = searchTerm.trim() === '' ? [] : products.filter(product => 
-    product.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.category.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.material.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    product.description.toLowerCase().includes(searchTerm.toLowerCase())
-  );
+  const filteredProducts = searchTerm.trim() === '' ? [] : (products || []).filter(product => {
+    if (!product) return false;
+    const query = searchTerm.toLowerCase();
+    const nameMatch = product.name?.toLowerCase().includes(query);
+    const catMatch = product.category?.toLowerCase().includes(query);
+    const matMatch = product.material?.toLowerCase().includes(query);
+    const descMatch = product.description?.toLowerCase().includes(query);
+    return nameMatch || catMatch || matMatch || descMatch;
+  });
 
   const handleSelectProduct = (productId) => {
     navigate(`/products/${productId}`);
@@ -81,42 +84,51 @@ const SearchModal = ({ onClose }) => {
               <p className="text-xs uppercase tracking-wider text-slate-400 dark:text-slate-500 font-bold px-1">
                 Matching Ladders ({filteredProducts.length})
               </p>
-              {filteredProducts.map(product => (
-                <div
-                  key={product.id}
-                  onClick={() => handleSelectProduct(product.id)}
-                  className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 cursor-pointer transition-all hover:scale-[1.01] group"
-                >
-                  <img
-                    src={product.images[0]}
-                    alt={product.name}
-                    className="w-14 h-14 object-cover rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-700"
-                  />
-                  <div className="flex-1 min-w-0">
-                    <div className="flex items-center gap-2">
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
-                        {product.category}
-                      </span>
-                      <div className="flex items-center text-amber-500 text-xs font-semibold">
-                        <Star className="w-3 h-3 fill-current mr-0.5" />
-                        {product.rating}
+              {filteredProducts.map(product => {
+                const prodId = product.id || product._id;
+                const prodImage = (Array.isArray(product.images) && product.images.length > 0) ? product.images[0] : '/images/hero_ladder.jpg';
+                const priceFormatted = Number(product.price || 0).toLocaleString('en-IN');
+                return (
+                  <div
+                    key={prodId}
+                    onClick={() => handleSelectProduct(prodId)}
+                    className="flex items-center gap-4 p-3 bg-slate-50 dark:bg-slate-800/50 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl border border-slate-200 dark:border-slate-700/50 cursor-pointer transition-all hover:scale-[1.01] group"
+                  >
+                    <img
+                      src={prodImage}
+                      alt={product.name || 'Ladder'}
+                      className="w-14 h-14 object-cover rounded-lg bg-slate-100 dark:bg-slate-950 border border-slate-200 dark:border-slate-700"
+                      onError={(e) => {
+                        e.target.onerror = null;
+                        e.target.src = '/images/hero_ladder.jpg';
+                      }}
+                    />
+                    <div className="flex-1 min-w-0">
+                      <div className="flex items-center gap-2">
+                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-600 dark:text-amber-400 bg-amber-500/10 px-2 py-0.5 rounded">
+                          {product.category || 'Ladder'}
+                        </span>
+                        <div className="flex items-center text-amber-500 text-xs font-semibold">
+                          <Star className="w-3 h-3 fill-current mr-0.5" />
+                          {product.rating ?? 5}
+                        </div>
                       </div>
+                      <h4 className="text-slate-900 dark:text-white text-sm font-semibold truncate group-hover:text-amber-500 transition-colors mt-0.5">
+                        {product.name}
+                      </h4>
+                      <p className="text-slate-500 dark:text-slate-400 text-xs">
+                        {product.material || 'Aluminium'} • {product.height || 'Standard'}
+                      </p>
                     </div>
-                    <h4 className="text-slate-900 dark:text-white text-sm font-semibold truncate group-hover:text-amber-500 transition-colors mt-0.5">
-                      {product.name}
-                    </h4>
-                    <p className="text-slate-500 dark:text-slate-400 text-xs">
-                      {product.material} • {product.height}
-                    </p>
-                  </div>
-                  <div className="text-right">
-                    <div className="text-amber-600 dark:text-amber-400 font-bold text-base">
-                      ₹{product.price.toLocaleString('en-IN')}
+                    <div className="text-right">
+                      <div className="text-amber-600 dark:text-amber-400 font-bold text-base">
+                        ₹{priceFormatted}
+                      </div>
+                      <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 ml-auto group-hover:translate-x-1 transition-transform" />
                     </div>
-                    <ChevronRight className="w-4 h-4 text-slate-400 dark:text-slate-500 ml-auto group-hover:translate-x-1 transition-transform" />
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           )}
         </div>

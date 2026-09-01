@@ -100,39 +100,65 @@ const MOCK_SEED_ORDERS = [
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(() => {
-    const savedUser = localStorage.getItem('akash_user');
-    return savedUser ? JSON.parse(savedUser) : null;
+    try {
+      const savedUser = localStorage.getItem('akash_user');
+      return savedUser && savedUser !== 'undefined' ? JSON.parse(savedUser) : null;
+    } catch (e) {
+      console.warn('Could not read user from localStorage:', e.message);
+      return null;
+    }
   });
 
   const [token, setToken] = useState(() => {
-    return localStorage.getItem('akash_token') || null;
+    try {
+      const savedToken = localStorage.getItem('akash_token');
+      return savedToken && savedToken !== 'undefined' ? savedToken : null;
+    } catch (e) {
+      return null;
+    }
   });
 
   const [localOrders, setLocalOrders] = useState(() => {
-    const saved = localStorage.getItem('akash_local_orders');
-    return saved ? JSON.parse(saved) : MOCK_SEED_ORDERS;
+    try {
+      const saved = localStorage.getItem('akash_local_orders');
+      return saved && saved !== 'undefined' ? JSON.parse(saved) : MOCK_SEED_ORDERS;
+    } catch (e) {
+      return MOCK_SEED_ORDERS;
+    }
   });
 
   const [loading, setLoading] = useState(false);
 
   useEffect(() => {
-    if (user) {
-      localStorage.setItem('akash_user', JSON.stringify(user));
-    } else {
-      localStorage.removeItem('akash_user');
+    try {
+      if (user) {
+        localStorage.setItem('akash_user', JSON.stringify(user));
+      } else {
+        localStorage.removeItem('akash_user');
+      }
+    } catch (e) {
+      console.warn('Could not write user to localStorage:', e.message);
     }
   }, [user]);
 
   useEffect(() => {
-    if (token) {
-      localStorage.setItem('akash_token', token);
-    } else {
-      localStorage.removeItem('akash_token');
+    try {
+      if (token) {
+        localStorage.setItem('akash_token', token);
+      } else {
+        localStorage.removeItem('akash_token');
+      }
+    } catch (e) {
+      console.warn('Could not write token to localStorage:', e.message);
     }
   }, [token]);
 
   useEffect(() => {
-    localStorage.setItem('akash_local_orders', JSON.stringify(localOrders));
+    try {
+      localStorage.setItem('akash_local_orders', JSON.stringify(localOrders));
+    } catch (e) {
+      console.warn('Could not write local orders to localStorage:', e.message);
+    }
   }, [localOrders]);
 
   // Strict Database Login handler

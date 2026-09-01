@@ -38,18 +38,20 @@ const Products = () => {
   };
 
   const filteredProducts = useMemo(() => {
-    return products.filter((product) => {
+    return (products || []).filter((product) => {
+      if (!product) return false;
       // Search
       if (searchTerm.trim() !== '') {
         const query = searchTerm.toLowerCase();
-        const matchesName = product.name.toLowerCase().includes(query);
-        const matchesCat = product.category.toLowerCase().includes(query);
-        const matchesMat = product.material.toLowerCase().includes(query);
-        if (!matchesName && !matchesCat && !matchesMat) return false;
+        const matchesName = product.name?.toLowerCase().includes(query);
+        const matchesCat = product.category?.toLowerCase().includes(query);
+        const matchesMat = product.material?.toLowerCase().includes(query);
+        const matchesDesc = product.description?.toLowerCase().includes(query);
+        if (!matchesName && !matchesCat && !matchesMat && !matchesDesc) return false;
       }
 
       // Category
-      if (selectedCategory !== 'All' && product.category !== selectedCategory) {
+      if (selectedCategory !== 'All' && product.category !== selectedCategory && product.categoryId !== selectedCategory.toLowerCase()) {
         return false;
       }
 
@@ -64,7 +66,8 @@ const Products = () => {
       }
 
       // Price
-      if (product.price > maxPrice) {
+      const prodPrice = Number(product.price) || 0;
+      if (prodPrice > maxPrice) {
         return false;
       }
 
@@ -79,10 +82,14 @@ const Products = () => {
 
       return true;
     }).sort((a, b) => {
-      if (sortBy === 'price-low') return a.price - b.price;
-      if (sortBy === 'price-high') return b.price - a.price;
-      if (sortBy === 'newest') return (b.isNew ? 1 : 0) - (a.isNew ? 1 : 0);
-      if (sortBy === 'popular') return b.rating - a.rating;
+      const priceA = Number(a?.price) || 0;
+      const priceB = Number(b?.price) || 0;
+      const ratingA = Number(a?.rating) || 5;
+      const ratingB = Number(b?.rating) || 5;
+      if (sortBy === 'price-low') return priceA - priceB;
+      if (sortBy === 'price-high') return priceB - priceA;
+      if (sortBy === 'newest') return (b?.isNewProduct ? 1 : 0) - (a?.isNewProduct ? 1 : 0);
+      if (sortBy === 'popular') return ratingB - ratingA;
       return 0;
     });
   }, [products, searchTerm, selectedCategory, selectedMaterial, selectedHeightRange, selectedUsage, maxPrice, sortBy]);

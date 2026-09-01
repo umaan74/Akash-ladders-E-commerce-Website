@@ -651,7 +651,7 @@ const AdminDashboard = () => {
                     <th className="p-4">Category</th>
                     <th className="p-4">Selling Price</th>
                     <th className="p-4">Stock Status</th>
-                    <th className="p-4">Images ({products.reduce((sum, p) => sum + (p.images?.length || 0), 0)})</th>
+                    <th className="p-4">Images ({(products || []).reduce((sum, p) => sum + (Array.isArray(p?.images) ? p.images.length : 0), 0)})</th>
                     <th className="p-4 text-center">Actions</th>
                   </tr>
                 </thead>
@@ -667,8 +667,12 @@ const AdminDashboard = () => {
                           <div className="flex items-center gap-3">
                             <img 
                               src={prod.images?.[0] || '/images/hero_ladder.jpg'} 
-                              alt={prod.name} 
+                              alt={prod.name || 'Product'} 
                               className="w-12 h-12 rounded-xl object-cover border border-slate-200 dark:border-slate-800 bg-slate-100 dark:bg-slate-950" 
+                              onError={(e) => {
+                                e.target.onerror = null;
+                                e.target.src = '/images/hero_ladder.jpg';
+                              }}
                             />
                             <div>
                               <p className="font-bold text-slate-900 dark:text-white text-sm">{prod.name}</p>
@@ -682,9 +686,9 @@ const AdminDashboard = () => {
                         </td>
 
                         <td className="p-4">
-                          <p className="font-extrabold text-slate-900 dark:text-white text-sm">₹{prod.price?.toLocaleString('en-IN')}</p>
-                          {prod.originalPrice > prod.price && (
-                            <p className="line-through text-slate-400 text-[11px]">₹{prod.originalPrice?.toLocaleString('en-IN')}</p>
+                          <p className="font-extrabold text-slate-900 dark:text-white text-sm">₹{Number(prod.price || 0).toLocaleString('en-IN')}</p>
+                          {Number(prod.originalPrice) > Number(prod.price) && (
+                            <p className="line-through text-slate-400 text-[11px]">₹{Number(prod.originalPrice || 0).toLocaleString('en-IN')}</p>
                           )}
                         </td>
 

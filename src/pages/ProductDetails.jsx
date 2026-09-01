@@ -35,7 +35,15 @@ const ProductDetails = () => {
 
   const { addToCart } = useCart();
 
-  const discountPercent = product ? Math.round(((product.originalPrice - product.price) / product.originalPrice) * 100) : 0;
+  const priceNum = Number(product?.price) || 0;
+  const origPriceNum = Number(product?.originalPrice) || 0;
+  const discountPercent = (origPriceNum > priceNum && origPriceNum > 0)
+    ? Math.round(((origPriceNum - priceNum) / origPriceNum) * 100)
+    : 0;
+
+  const productImages = (Array.isArray(product?.images) && product.images.length > 0)
+    ? product.images
+    : ['/images/hero_ladder.jpg'];
 
   // Load genuine customer reviews from MongoDB
   const loadReviews = async () => {
@@ -151,9 +159,13 @@ const ProductDetails = () => {
         <div className="lg:col-span-6 space-y-4">
           <div className="relative bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl overflow-hidden aspect-[4/3] flex items-center justify-center p-6 group shadow-sm">
             <img 
-              src={product.images[activeImageIndex] || product.images[0]} 
-              alt={product.name}
+              src={productImages[activeImageIndex] || productImages[0]} 
+              alt={product.name || 'Ladder'}
               className="max-h-full max-w-full object-contain transition-transform duration-500 group-hover:scale-105" 
+              onError={(e) => {
+                e.target.onerror = null;
+                e.target.src = '/images/hero_ladder.jpg';
+              }}
             />
             
             {/* Badges */}
@@ -172,9 +184,9 @@ const ProductDetails = () => {
           </div>
 
           {/* Thumbnails */}
-          {product.images.length > 1 && (
+          {productImages.length > 1 && (
             <div className="flex gap-3 overflow-x-auto pb-2">
-              {product.images.map((img, idx) => (
+              {productImages.map((img, idx) => (
                 <button
                   key={idx}
                   onClick={() => setActiveImageIndex(idx)}

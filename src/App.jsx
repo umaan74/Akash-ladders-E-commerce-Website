@@ -25,6 +25,7 @@ import CustomerDashboard from './pages/CustomerDashboard';
 import AdminDashboard from './pages/AdminDashboard';
 
 import { ThemeProvider } from './context/ThemeContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Helper component to reset scroll position on route navigation
 const ScrollToTop = () => {
@@ -37,10 +38,11 @@ const ScrollToTop = () => {
 
 function App() {
   return (
-    <Router>
-      <ThemeProvider>
-        <AuthProvider>
-          <ProductProvider>
+    <ErrorBoundary>
+      <Router>
+        <ThemeProvider>
+          <AuthProvider>
+            <ProductProvider>
             <CartProvider>
               <WishlistProvider>
                 <CompareProvider>
@@ -89,6 +91,7 @@ function App() {
     </AuthProvider>
     </ThemeProvider>
   </Router>
+  </ErrorBoundary>
   );
 }
 

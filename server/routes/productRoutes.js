@@ -39,6 +39,7 @@ router.get('/', async (req, res) => {
     }
 
     const products = await Product.find(query).sort({ createdAt: -1 });
+    console.log(`📦 [Backend GET /api/products] Returned ${products.length} products (DB: "${mongoose.connection.name}", Host: ${mongoose.connection.host})`);
     res.json({ success: true, count: products.length, products });
   } catch (error) {
     console.error('Fetch Products Error:', error);

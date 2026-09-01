@@ -33,17 +33,28 @@ export const ProductProvider = ({ children }) => {
   // Fetch products live from MongoDB backend API (/api/products)
   const fetchLiveProducts = async (showLoading = true) => {
     if (showLoading) setLoading(true);
+    const targetEndpoint = `${API_BASE_URL}/api/products`;
     try {
-      const res = await fetch(`${API_BASE_URL}/api/products`);
+      console.log(`📡 [ProductContext] Fetching live products from: "${targetEndpoint || '/api/products'}"`);
+      const res = await fetch(targetEndpoint);
       const data = await parseJsonResponse(res);
-      if (res.ok && data.success && Array.isArray(data.products) && data.products.length > 0) {
-        setProducts(data.products);
-        setError(null);
+      if (res.ok && data.success && Array.isArray(data.products)) {
+        console.log(`✅ [ProductContext] Received ${data.products.length} products (HTTP ${res.status}) from backend:`, 
+          data.products.map(p => ({ id: p.id || p._id, name: p.name, price: p.price }))
+        );
+        if (data.products.length > 0) {
+          setProducts(data.products);
+          setError(null);
+        } else {
+          console.warn('⚠️ [ProductContext] Backend returned empty product array (0 items). Using fallback data.');
+          setProducts(fallbackProducts);
+        }
       } else {
+        console.warn('⚠️ [ProductContext] Response did not indicate success. Using fallback data:', data);
         setProducts(fallbackProducts);
       }
     } catch (err) {
-      console.warn('Could not connect to MongoDB API server for live products, using fallback data:', err.message);
+      console.error(`❌ [ProductContext] Could not connect to API server at "${targetEndpoint}":`, err.message);
       setProducts(fallbackProducts);
       setError(err.message);
     } finally {

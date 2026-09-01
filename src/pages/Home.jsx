@@ -21,7 +21,7 @@ const iconMap = {
 
 const Home = () => {
   const { products, categories } = useProducts();
-  const featuredProducts = products.filter(p => p.featured);
+  const featuredProducts = (products || []).filter(p => p && p.featured);
 
   return (
     <div className="space-y-16 md:space-y-20 pb-16">
