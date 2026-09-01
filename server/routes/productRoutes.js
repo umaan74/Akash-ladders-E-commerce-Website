@@ -141,6 +141,17 @@ router.post('/', verifyToken, verifyAdmin, async (req, res) => {
       safetyInfo: Array.isArray(safetyInfo) ? safetyInfo : [],
     });
 
+    // Real-time broadcast event to all connected devices across PC, Mobile, and Tablet
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('productCreated', {
+        product: newProduct,
+        action: 'create',
+        timestamp: new Date().toISOString(),
+      });
+      console.log(`📡 [Socket.IO] Broadcasted "productCreated" for "${newProduct.name}" (ID: ${newProduct.id})`);
+    }
+
     res.status(201).json({
       success: true,
       message: 'New Product created successfully in MongoDB database!',
@@ -188,6 +199,19 @@ router.put('/:id', verifyToken, verifyAdmin, async (req, res) => {
       return res.status(404).json({ success: false, message: `Product with ID "${id}" not found in database.` });
     }
 
+    // Real-time broadcast event to all connected devices across PC, Mobile, and Tablet
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('productUpdated', {
+        product: updatedProduct,
+        id: updatedProduct.id,
+        _id: updatedProduct._id,
+        action: 'update',
+        timestamp: new Date().toISOString(),
+      });
+      console.log(`📡 [Socket.IO] Broadcasted "productUpdated" for "${updatedProduct.name}" (ID: ${updatedProduct.id})`);
+    }
+
     res.json({
       success: true,
       message: `Product "${updatedProduct.name}" updated successfully!`,
@@ -208,6 +232,19 @@ router.delete('/:id', verifyToken, verifyAdmin, async (req, res) => {
 
     if (!deletedProduct) {
       return res.status(404).json({ success: false, message: `Product with ID "${id}" not found in database.` });
+    }
+
+    // Real-time broadcast event to all connected devices across PC, Mobile, and Tablet
+    const io = req.app.get('io');
+    if (io) {
+      io.emit('productDeleted', {
+        id: deletedProduct.id || id,
+        _id: deletedProduct._id,
+        name: deletedProduct.name,
+        action: 'delete',
+        timestamp: new Date().toISOString(),
+      });
+      console.log(`📡 [Socket.IO] Broadcasted "productDeleted" for ID: ${deletedProduct.id || id}`);
     }
 
     res.json({

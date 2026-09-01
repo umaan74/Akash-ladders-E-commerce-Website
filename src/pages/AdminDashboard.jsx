@@ -19,7 +19,7 @@ const AdminDashboard = () => {
   const { getAdminOrders, updateOrderStatus } = useAuth();
   const { 
     products, addProduct, updateProduct, deleteProduct, 
-    fetchAllReviews, deleteReview, refreshProducts 
+    fetchAllReviews, deleteReview, refreshProducts, socketConnected 
   } = useProducts();
 
   const [activeAdminTab, setActiveAdminTab] = useState('orders'); // 'orders' | 'products' | 'reviews'
@@ -382,12 +382,17 @@ const AdminDashboard = () => {
             <ShieldCheck className="w-9 h-9" />
           </div>
           <div>
-            <div className="flex items-center gap-2">
+            <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs uppercase tracking-wider font-extrabold text-amber-600 dark:text-amber-400 bg-amber-500/10 px-3 py-1 rounded-full border border-amber-500/20">
                 JWT Authorized Admin Portal
               </span>
-              <span className="text-xs text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-full border border-emerald-500/20 font-semibold">
-                MongoDB Active
+              <span className={`text-xs px-2.5 py-0.5 rounded-full border font-semibold flex items-center gap-1.5 ${
+                socketConnected 
+                  ? 'text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 border-emerald-500/20' 
+                  : 'text-amber-600 dark:text-amber-400 bg-amber-500/10 border-amber-500/20'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${socketConnected ? 'bg-emerald-500 animate-pulse' : 'bg-amber-500'}`} />
+                <span>{socketConnected ? 'Real-Time Sync Active' : 'Connecting Real-Time...'}</span>
               </span>
             </div>
             <h1 className="text-2xl sm:text-3xl font-black text-slate-900 dark:text-white mt-1">Akash Ladders Admin Control Center</h1>

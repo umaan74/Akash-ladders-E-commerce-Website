@@ -1,7 +1,8 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { io } from 'socket.io-client';
 import { products as fallbackProducts, categories as initialCategories } from '../data/products';
 import { useAuth } from './AuthContext';
-import { API_BASE_URL } from '../config/api';
+import { API_BASE_URL, SOCKET_SERVER_URL } from '../config/api';
 
 const ProductContext = createContext();
 
@@ -10,6 +11,8 @@ export const ProductProvider = ({ children }) => {
   const [categories] = useState(initialCategories);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [socketConnected, setSocketConnected] = useState(false);
+  const socketRef = useRef(null);
   const { token } = useAuth();
 
   // Helper to reliably retrieve token from state or localStorage
@@ -28,8 +31,8 @@ export const ProductProvider = ({ children }) => {
   };
 
   // Fetch products live from MongoDB backend API (/api/products)
-  const fetchLiveProducts = async () => {
-    setLoading(true);
+  const fetchLiveProducts = async (showLoading = true) => {
+    if (showLoading) setLoading(true);
     try {
       const res = await fetch(`${API_BASE_URL}/api/products`);
       const data = await parseJsonResponse(res);
@@ -44,12 +47,99 @@ export const ProductProvider = ({ children }) => {
       setProducts(fallbackProducts);
       setError(err.message);
     } finally {
-      setLoading(false);
+      if (showLoading) setLoading(false);
     }
   };
 
+  // Real-time Socket.IO Connection & Listener Lifecycle
   useEffect(() => {
+    // Initial fetch of database catalog
     fetchLiveProducts();
+
+    let socketInstance = null;
+    try {
+      socketInstance = io(SOCKET_SERVER_URL, {
+        transports: ['websocket', 'polling'],
+        reconnection: true,
+        reconnectionAttempts: Infinity,
+        reconnectionDelay: 1000,
+        reconnectionDelayMax: 5000,
+        timeout: 20000,
+      });
+
+      socketRef.current = socketInstance;
+
+      socketInstance.on('connect', () => {
+        setSocketConnected(true);
+        console.log('⚡ [Socket.IO Client] Connected to real-time server for live cross-device sync');
+        // On connection or reconnection, silently re-fetch to guarantee 100% state consistency
+        fetchLiveProducts(false);
+      });
+
+      socketInstance.on('disconnect', (reason) => {
+        setSocketConnected(false);
+        console.log(`⚡ [Socket.IO Client] Disconnected from real-time server: ${reason}`);
+      });
+
+      socketInstance.on('connect_error', (err) => {
+        setSocketConnected(false);
+        console.warn('⚡ [Socket.IO Client] Connection error (will auto-reconnect):', err.message);
+      });
+
+      // REAL-TIME EVENT: Product Created on any connected device
+      socketInstance.on('productCreated', (data) => {
+        if (data && data.product) {
+          const newProduct = data.product;
+          console.log(`📡 [Real-time Sync] Product Created: "${newProduct.name}" (ID: ${newProduct.id})`);
+          setProducts((prev) => {
+            // Deduplicate: check if product is already in local state
+            const exists = prev.some(
+              (p) => (p.id && p.id === newProduct.id) || (p._id && p._id === newProduct._id)
+            );
+            if (exists) {
+              return prev.map((p) =>
+                (p.id && p.id === newProduct.id) || (p._id && p._id === newProduct._id) ? newProduct : p
+              );
+            }
+            return [newProduct, ...prev];
+          });
+        }
+      });
+
+      // REAL-TIME EVENT: Product Updated on any connected device
+      socketInstance.on('productUpdated', (data) => {
+        if (data && data.product) {
+          const updatedProduct = data.product;
+          console.log(`📡 [Real-time Sync] Product Updated: "${updatedProduct.name}" (ID: ${updatedProduct.id})`);
+          setProducts((prev) =>
+            prev.map((p) =>
+              (p.id && p.id === updatedProduct.id) || (p._id && p._id === updatedProduct._id)
+                ? { ...p, ...updatedProduct }
+                : p
+            )
+          );
+        }
+      });
+
+      // REAL-TIME EVENT: Product Deleted on any connected device
+      socketInstance.on('productDeleted', (data) => {
+        if (data && (data.id || data._id || data.productId)) {
+          const targetId = data.id || data._id || data.productId;
+          console.log(`📡 [Real-time Sync] Product Deleted (ID: ${targetId})`);
+          setProducts((prev) =>
+            prev.filter((p) => p.id !== targetId && p._id !== targetId)
+          );
+        }
+      });
+    } catch (err) {
+      console.warn('Failed to establish Socket.IO client connection:', err);
+    }
+
+    return () => {
+      if (socketInstance) {
+        socketInstance.disconnect();
+      }
+    };
   }, []);
 
   // Get product by ID
@@ -228,6 +318,7 @@ export const ProductProvider = ({ children }) => {
         categories,
         loading,
         error,
+        socketConnected,
         refreshProducts: fetchLiveProducts,
         getProductById,
         addProduct,
